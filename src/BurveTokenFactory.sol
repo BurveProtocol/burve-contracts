@@ -77,12 +77,11 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         tokensLength++;
         tokensType[address(proxy)] = token.tokenType;
         if (mintfirstAmount > 0) {
-            (uint256 minReceive, , , ) = IBurveToken(address(proxy)).estimateMint(msg.value);
             if (token.raisingTokenAddr != address(0)) {
                 IERC20(token.raisingTokenAddr).transferFrom(msg.sender, address(this), mintfirstAmount);
                 IERC20(token.raisingTokenAddr).approve(address(proxy), mintfirstAmount);
             }
-            IBurveToken(address(proxy)).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, minReceive);
+            IBurveToken(address(proxy)).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, 0);
         }
         emit LogTokenDeployed(token.tokenType, token.bondingCurveType, tokenId, address(proxy));
         return address(proxy);

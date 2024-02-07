@@ -20,6 +20,7 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
         bytes memory parameters,
         address factory
     ) public override initializer {
+        require(bytes(name).length > 0 && bytes(symbol).length > 0, "symbol or name can not be empty");
         __ERC20_init(name, symbol);
         _changeCoinMaker(bondingCurveAddress);
         _initProject(projectAdmin, projectTreasury);
@@ -78,8 +79,8 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
             IHook(hooks[i]).afterTransferHook(from, to, amount);
         }
     }
-    
-    function baseDecimals() internal override view returns (uint8){
+
+    function baseDecimals() internal view override returns (uint8) {
         return ERC20VotesUpgradeable(_raisingToken).decimals();
     }
 }
