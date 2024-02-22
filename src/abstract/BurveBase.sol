@@ -147,9 +147,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         require(_doomsday, "Warning: You are not allowed to destroy under normal circumstances");
         emit LogDestroyed(_msgSender());
         if (_raisingToken != address(0)) {
-            IERC20(_raisingToken).transfer(_msgSender(), IERC20(_raisingToken).balanceOf(address(this)));
+            IERC20(_raisingToken).transfer(_projectTreasury, IERC20(_raisingToken).balanceOf(address(this)));
         }
-        selfdestruct(payable(_projectTreasury));
+        (bool suc, ) = payable(_projectTreasury).call{value: address(this).balance}("");
+        require(suc, "transfer failed");
     }
 
     function _setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
@@ -178,19 +179,26 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     function mint(address to, uint payAmount, uint minReceive) public payable virtual whenNotPaused nonReentrant {
         require(to != address(0), "can not mint to address(0)");
         _transferFromInternal(msg.sender, payAmount);
-        uint256 daoTokenAmount;
+        uint256 tokenAmount;
 
         (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
         uint256 projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
         uint256 platformFee = (payAmount * _platformMintTax) / MAX_TAX_RATE_DENOMINATOR;
         uint256 payAmountActual = payAmount - projectFee - platformFee;
         // Calculate the actual amount through Bonding Curve
-        (daoTokenAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, _getCurrentSupply());
-        require(daoTokenAmount >= minReceive, "Mint: mint amount less than minimal expect recieved");
+        (tokenAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, _getCurrentSupply());
+        require(tokenAmount >= minReceive, "Mint: mint amount less than minimal expect recieved");
+        address[] memory hooks = getHooks();
+        for (uint256 i = 0; i < hooks.length; i++) {
+            IHook(hooks[i]).beforeMintHook(address(0), to, tokenAmount);
+        }
+        _mintInternal(to, tokenAmount);
+        for (uint256 i = 0; i < hooks.length; i++) {
+            IHook(hooks[i]).afterMintHook(address(0), to, tokenAmount);
+        }
         _transferInternal(_factory.getPlatformTreasury(), platformFee);
         _transferInternal(_projectTreasury, projectFee);
-        _mintInternal(to, daoTokenAmount);
-        emit LogMint(to, daoTokenAmount, payAmountActual, platformFee, projectFee);
+        emit LogMint(to, tokenAmount, payAmountActual, platformFee, projectFee);
     }
 
     function estimateMint(uint payAmount) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
@@ -223,8 +231,14 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         uint256 platformFee = (amountReturn * _platformBurnTax) / MAX_TAX_RATE_DENOMINATOR;
         amountReturn = amountReturn - projectFee - platformFee;
         require(amountReturn >= minReceive, "Burn: payback amount less than minimal expect recieved");
-
+        address[] memory hooks = getHooks();
+        for (uint256 i = 0; i < hooks.length; i++) {
+            IHook(hooks[i]).beforeBurnHook(to, address(0), payAmount);
+        }
         _burnInternal(from, payAmount);
+        for (uint256 i = 0; i < hooks.length; i++) {
+            IHook(hooks[i]).afterBurnHook(to, address(0), payAmount);
+        }
         _transferInternal(_factory.getPlatformTreasury(), platformFee);
         _transferInternal(_projectTreasury, projectFee);
         _transferInternal(to, amountReturn);
@@ -281,9 +295,9 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     event Paused(address account);
     event Unpaused(address account);
 
-    event LogMint(address to, uint256 daoTokenAmount, uint256 lockAmount, uint256 platformFee, uint256 projectFee);
+    event LogMint(address to, uint256 tokenAmount, uint256 lockAmount, uint256 platformFee, uint256 projectFee);
 
-    event LogBurned(address from, uint256 daoTokenAmount, uint256 returnAmount, uint256 platformFee, uint256 projectFee);
+    event LogBurned(address from, uint256 tokenAmount, uint256 returnAmount, uint256 platformFee, uint256 projectFee);
 
     fallback() external {}
 }

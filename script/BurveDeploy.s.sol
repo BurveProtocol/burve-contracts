@@ -15,11 +15,12 @@ contract BurveDeployScript is BaseScript {
 
     function run() public {
         deployerKey = vm.envUint("DEPLOYER_KEY");
-        startBroadcast(deployerKey);
+        address deployer = vm.addr(deployerKey);
+        vm.startBroadcast(deployerKey);
         ProxyAdmin admin = new ProxyAdmin();
-        BurveRoute route = new BurveRoute();
+        // BurveRoute route = new BurveRoute();
         BurveTokenFactory factoryImpl = new BurveTokenFactory();
-        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, msg.sender, msg.sender, address(route));
+        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, deployer, 0x84144F83Cb91EE0a17799719eB9587B72C071aF3, address(0));
         TransparentUpgradeableProxy factoryProxy = new TransparentUpgradeableProxy(address(factoryImpl), address(admin), factoryInitData);
         factory = BurveTokenFactory(payable(factoryProxy));
         ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
@@ -28,7 +29,7 @@ contract BurveDeployScript is BaseScript {
         factory.updateBurveImplement("ERC20", address(erc20Impl));
         logAddr(address(admin), "Burve Factory Proxy Admin");
         logAddr(address(factoryProxy), "Burve Factory Proxy");
-        logAddr(address(route), "Burve Route");
+        // logAddr(address(route), "Burve Route");
         logAddr(address(factoryImpl), "Burve Factory Implement");
         logAddr(address(exp), string.concat(exp.BondingCurveType(), " Bonding Curve"));
         stopBroadcast();

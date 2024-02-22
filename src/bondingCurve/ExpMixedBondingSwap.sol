@@ -16,48 +16,48 @@ contract ExpMixedBondingSwap is IBondingCurve {
         (a, b) = abi.decode(data, (uint256, uint256));
     }
 
-    // x => daoTokenAmount, y => nativeTokenAmount
+    // x => tokenAmount, y => rasingTokenAmount
     // y = (a) e**(x/b)
-    // daoTokenAmount = b * ln(e ^ (daoTokenCurrentSupply / b) + nativeTokenAmount / a / b) - daoTokenCurrentSupply
-    function calculateMintAmountFromBondingCurve(uint256 nativeTokenAmount, uint256 daoTokenCurrentSupply, bytes memory parameters) public pure override returns (uint256 daoTokenAmount, uint256) {
+    // tokenAmount = b * ln(e ^ (tokenCurrentSupply / b) + rasingTokenAmount / a / b) - tokenCurrentSupply
+    function calculateMintAmountFromBondingCurve(uint256 rasingTokenAmount, uint256 tokenCurrentSupply, bytes memory parameters) public pure override returns (uint256 tokenAmount, uint256) {
         (uint256 a, uint256 b) = getParameter(parameters);
-        require(daoTokenCurrentSupply < uint256(1 << 192));
-        require(nativeTokenAmount < uint256(1 << 192));
-        uint256 e_index = (daoTokenCurrentSupply << 64) / b;
-        uint256 e_mod = ((nativeTokenAmount * 1e18) << 64) / a / b;
+        require(tokenCurrentSupply < uint256(1 << 192));
+        require(rasingTokenAmount < uint256(1 << 192));
+        uint256 e_index = (tokenCurrentSupply << 64) / b;
+        uint256 e_mod = ((rasingTokenAmount * 1e18) << 64) / a / b;
         require(e_index <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
         require(e_mod <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
         int128 fabdk_e_index = int128(uint128(e_index));
         int128 fabdk_e_mod = int128(uint128(e_mod));
         int128 fabdk_x = (fabdk_e_index.exp() + fabdk_e_mod).ln();
         require(fabdk_x >= 0);
-        daoTokenAmount = (((uint256(uint128(fabdk_x))) * b) >> 64) - daoTokenCurrentSupply;
-        return (daoTokenAmount, nativeTokenAmount);
+        tokenAmount = (((uint256(uint128(fabdk_x))) * b) >> 64) - tokenCurrentSupply;
+        return (tokenAmount, rasingTokenAmount);
     }
 
-    // x => daoTokenAmount, y => nativeTokenAmount
+    // x => tokenAmount, y => rasingTokenAmount
     // y = (a) e**(x/b)
-    // nativeTokenAmount = ab * (e ^ (daoTokenCurrentSupply / b) - e ^ ((daoTokenCurrentSupply - daoTokenAmount) / b))
-    function calculateBurnAmountFromBondingCurve(uint256 daoTokenAmount, uint256 daoTokenCurrentSupply, bytes memory parameters) public pure override returns (uint256, uint256 nativeTokenAmount) {
+    // rasingTokenAmount = ab * (e ^ (tokenCurrentSupply / b) - e ^ ((tokenCurrentSupply - tokenAmount) / b))
+    function calculateBurnAmountFromBondingCurve(uint256 tokenAmount, uint256 tokenCurrentSupply, bytes memory parameters) public pure override returns (uint256, uint256 rasingTokenAmount) {
         (uint256 a, uint256 b) = getParameter(parameters);
-        require(daoTokenCurrentSupply < uint256(1 << 192));
-        require(daoTokenAmount < uint256(1 << 192));
-        uint256 e_index_1 = (daoTokenCurrentSupply << 64) / b;
-        uint256 e_index_0 = ((daoTokenCurrentSupply - daoTokenAmount) << 64) / b;
+        require(tokenCurrentSupply < uint256(1 << 192));
+        require(tokenAmount < uint256(1 << 192));
+        uint256 e_index_1 = (tokenCurrentSupply << 64) / b;
+        uint256 e_index_0 = ((tokenCurrentSupply - tokenAmount) << 64) / b;
         require(e_index_1 <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
         require(e_index_0 <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
         int128 fabdk_e_index_1 = int128(uint128(e_index_1));
         int128 fabdk_e_index_0 = int128(uint128(e_index_0));
         int128 fabdk_y = fabdk_e_index_1.exp() - fabdk_e_index_0.exp();
         require(fabdk_y >= 0);
-        nativeTokenAmount = (((uint256(uint128(fabdk_y))) * a * b) / 1e18) >> 64;
-        return (daoTokenAmount, nativeTokenAmount);
+        rasingTokenAmount = (((uint256(uint128(fabdk_y))) * a * b) / 1e18) >> 64;
+        return (tokenAmount, rasingTokenAmount);
     }
 
-    // price = a  * e ^ (daoTokenCurrentSupply / b)
-    function price(uint256 daoTokenCurrentSupply, bytes memory parameters) public pure override returns (uint256) {
+    // price = a  * e ^ (tokenCurrentSupply / b)
+    function price(uint256 tokenCurrentSupply, bytes memory parameters) public pure override returns (uint256) {
         (uint256 a, uint256 b) = getParameter(parameters);
-        uint256 e_index = (daoTokenCurrentSupply << 64) / b;
+        uint256 e_index = (tokenCurrentSupply << 64) / b;
         require(e_index <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
         int128 fabdk_e_index = int128(uint128(e_index));
         int128 fabdk_y = fabdk_e_index.exp();

@@ -40,27 +40,11 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
     }
 
     function _mintInternal(address account, uint256 amount) internal virtual override {
-        address[] memory hooks = getHooks();
-        for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).beforeMintHook(address(0), account, amount);
-        }
         _mint(account, amount);
-
-        for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).afterMintHook(address(0), account, amount);
-        }
     }
 
     function _burnInternal(address account, uint256 amount) internal virtual override {
-        address[] memory hooks = getHooks();
-        for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).beforeBurnHook(account, address(0), amount);
-        }
         _burn(account, amount);
-
-        for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).afterBurnHook(account, address(0), amount);
-        }
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
