@@ -51,8 +51,8 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         _platformAdmin = platformAdmin;
         _platformTreasury = platformTreasury;
         _route = route;
-        _platformMintTax = 80;
-        _platformBurnTax = 80;
+        _platformMintTax = 100;
+        _platformBurnTax = 100;
         _proxyAdmin = new ProxyAdmin();
     }
 

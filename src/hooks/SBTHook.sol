@@ -7,7 +7,7 @@ import "./BaseHook.sol";
 contract SBTHook is BaseHook {
     constructor(address factory) BaseHook(factory) {}
 
-    function beforeTransferHook(address, address, uint256) external pure override {
-        revert("can not transfer");
+    function beforeTransferHook(address from, address to, uint256) external pure override {
+        require(from == address(0) || to == address(0), "can not transfer");
     }
 }

@@ -1,4 +1,5 @@
 ```shell
-git submodule update --init
+git submodule update --init --recursive
 forge build
+forge test
 ```
