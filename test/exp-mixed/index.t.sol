@@ -30,7 +30,7 @@ contract ExpMixedTest is BaseTest {
 
     function testOne(uint256 currentSupply, uint256 nativeAsset) private {
         (uint256 tokenAmount1, uint256 raisingTokenAmount1) = curve.calculateMintAmountFromBondingCurve(nativeAsset, currentSupply, data);
-        (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, tokenAmount1, data);
+        (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, currentSupply + tokenAmount1, data);
         uint256 price = curve.price(tokenAmount1, data);
 
         console.log("erc20 minted", tokenAmount1);
