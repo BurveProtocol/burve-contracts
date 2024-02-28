@@ -132,12 +132,6 @@ interface IBurveFactory {
     function getPlatformTreasury() external view returns (address);
 
     /**
-     * Declare a doomsday event for a token.
-     * @param proxyAddress the address of the token's proxy.
-     */
-    function declareDoomsday(address proxyAddress) external;
-
-    /**
      * Pause a token.
      * @param proxyAddress the address of the token's proxy.
      */

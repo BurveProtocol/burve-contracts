@@ -4,6 +4,7 @@ pragma solidity >=0.8.13;
 // openzeppelin
 import "openzeppelin-upgradeable/access/AccessControlUpgradeable.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
+import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin/security/ReentrancyGuard.sol";
 
 import "./SwapCurve.sol";
@@ -12,13 +13,14 @@ import "../interfaces/IBurveFactory.sol";
 import "../interfaces/IHook.sol";
 
 abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
     bool private _paused = false;
     bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
     bytes32 public constant PROJECT_ADMIN_ROLE = keccak256("PROJECT_ADMIN_ROLE");
     address internal _projectTreasury;
     address internal _projectAdmin;
     IBurveFactory internal _factory;
-    bool private _doomsday = false;
+    bool private _boolSlot = false;//temporary useless
     uint256 internal constant MAX_TAX_RATE_DENOMINATOR = 10000;
     uint256 internal constant MAX_PROJECT_TAX_RATE = 5000;
     uint256 internal _projectMintTax = 0;
@@ -56,10 +58,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return PROJECT_ADMIN_ROLE;
     }
 
-    function doomsday() public view returns (bool) {
-        return _doomsday;
-    }
-
     function getFactory() public view returns (address) {
         return address(_factory);
     }
@@ -94,13 +92,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit Unpaused(_msgSender());
     }
 
-    function declareDoomsday() public onlyRole(FACTORY_ROLE) {
-        if (!paused()) {
-            _paused = true;
-        }
-        _declareDoomsday();
-    }
-
     function setProjectAdmin(address newProjectAdmin) public onlyRole(PROJECT_ADMIN_ROLE) {
         require(newProjectAdmin != address(0), "Invalid Address");
         _revokeRole(PROJECT_ADMIN_ROLE, _projectAdmin);
@@ -122,10 +113,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogProjectTreasuryChanged(newProjectTreasury);
     }
 
-    function destroyForDoomsday() public onlyRole(PROJECT_ADMIN_ROLE) {
-        _destroy();
-    }
-
     function _initProject(address projectAdmin, address projectTreasury) internal {
         require(projectAdmin != address(0), "Invalid Admin Address");
         require(projectTreasury != address(0), "Invalid Treasury Address");
@@ -136,21 +123,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     function _initFactory(address account) internal {
         require(account != address(0), "Invalid Treasury Address");
         _factory = IBurveFactory(account);
-    }
-
-    function _declareDoomsday() internal {
-        _doomsday = true;
-        emit LogDeclareDoomsday(_msgSender());
-    }
-
-    function _destroy() internal {
-        require(_doomsday, "Warning: You are not allowed to destroy under normal circumstances");
-        emit LogDestroyed(_msgSender());
-        if (_raisingToken != address(0)) {
-            IERC20(_raisingToken).transfer(_projectTreasury, IERC20(_raisingToken).balanceOf(address(this)));
-        }
-        (bool suc, ) = payable(_projectTreasury).call{value: address(this).balance}("");
-        require(suc, "transfer failed");
     }
 
     function _setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
@@ -233,11 +205,11 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         require(amountReturn >= minReceive, "Burn: payback amount less than minimal expect recieved");
         address[] memory hooks = getHooks();
         for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).beforeBurnHook(to, address(0), payAmount);
+            IHook(hooks[i]).beforeBurnHook(from, address(0), payAmount);
         }
         _burnInternal(from, payAmount);
         for (uint256 i = 0; i < hooks.length; i++) {
-            IHook(hooks[i]).afterBurnHook(to, address(0), payAmount);
+            IHook(hooks[i]).afterBurnHook(from, address(0), payAmount);
         }
         _transferInternal(_factory.getPlatformTreasury(), platformFee);
         _transferInternal(_projectTreasury, projectFee);
@@ -263,7 +235,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         if (_raisingToken == address(0)) {
             require(amount <= msg.value, "invalid value");
         } else {
-            require(IERC20(_raisingToken).transferFrom(account, address(this), amount));
+            IERC20(_raisingToken).safeTransferFrom(account, address(this), amount);
         }
     }
 
@@ -273,7 +245,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
             (bool success, ) = account.call{value: amount}("");
             require(success, "Transfer: failed");
         } else {
-            require(IERC20(_raisingToken).transfer(account, amount));
+            IERC20(_raisingToken).safeTransfer(account, amount);
         }
     }
 
@@ -288,7 +260,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     event LogProjectTaxChanged();
-    event LogDeclareDoomsday(address account);
     event LogDestroyed(address account);
     event LogProjectAdminChanged(address newAccount);
     event LogProjectTreasuryChanged(address newAccount);

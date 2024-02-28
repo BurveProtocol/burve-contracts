@@ -172,14 +172,4 @@ interface IBurveToken is IAccessControlUpgradeable {
      *   @dev Unpauses the Burve token contract
      */
     function unpause() external;
-
-    /**
-     *  @dev Destroys the Burve token contract for doomsday scenario
-     */
-    function destroyForDoomsday() external;
-
-    /**
-     *   @dev Declares doomsday scenario for the Burve token contract
-     */
-    function declareDoomsday() external;
 }

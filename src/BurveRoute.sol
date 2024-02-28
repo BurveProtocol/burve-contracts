@@ -4,8 +4,10 @@ pragma solidity ^0.8.0;
 import "./interfaces/IBurveRoute.sol";
 import "./interfaces/IBurveToken.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
+import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 contract BurveRoute is IBurveRoute {
+    using SafeERC20 for IERC20;
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "expired");
         _;
@@ -23,11 +25,11 @@ contract BurveRoute is IBurveRoute {
         IBurveToken toToken = IBurveToken(toTokenAddr);
         (uint tokenReceived, uint raisingTokenAmount) = getAmountOut(fromTokenAddr, toTokenAddr, amount);
         require(tokenReceived >= minReturn, "can not reach minReturn");
-        IERC20(fromTokenAddr).transferFrom(msg.sender, address(this), amount);
+        IERC20(fromTokenAddr).safeTransferFrom(msg.sender, address(this), amount);
         fromToken.burn(address(this), amount, raisingTokenAmount);
         address raisingToken = fromToken.getRaisingToken();
         if (raisingToken != address(0)) {
-            IERC20(raisingToken).approve(toTokenAddr, raisingTokenAmount);
+            IERC20(raisingToken).safeApprove(toTokenAddr, raisingTokenAmount);
         }
         toToken.mint{value: raisingToken == address(0) ? raisingTokenAmount : 0}(
             address(to),
