@@ -5,12 +5,15 @@ import "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import "openzeppelin/access/AccessControl.sol";
 import "openzeppelin-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
+
+import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IBurveFactory.sol";
 import "./interfaces/IBurveToken.sol";
 import "./interfaces/IBondingCurve.sol";
 import "./interfaces/IHook.sol";
 
 contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
+    using SafeERC20 for IERC20;
     bytes32 public constant PLATFORM_ADMIN_ROLE = keccak256("PLATFORM_ADMIN");
 
     mapping(string => address) private _implementsMap;
@@ -78,8 +81,8 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         tokensType[address(proxy)] = token.tokenType;
         if (mintfirstAmount > 0) {
             if (token.raisingTokenAddr != address(0)) {
-                IERC20(token.raisingTokenAddr).transferFrom(msg.sender, address(this), mintfirstAmount);
-                IERC20(token.raisingTokenAddr).approve(address(proxy), mintfirstAmount);
+                IERC20(token.raisingTokenAddr).safeTransferFrom(msg.sender, address(this), mintfirstAmount);
+                IERC20(token.raisingTokenAddr).safeApprove(address(proxy), mintfirstAmount);
             }
             IBurveToken(address(proxy)).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, 0);
         }
@@ -172,10 +175,6 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         require(newPlatformTreasury != address(0), "Invalid Address");
         _platformTreasury = newPlatformTreasury;
         emit LogPlatformTreasuryChanged(newPlatformTreasury);
-    }
-
-    function declareDoomsday(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
-        IBurveToken(proxyAddress).declareDoomsday();
     }
 
     function pause(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
