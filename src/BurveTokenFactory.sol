@@ -216,12 +216,18 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
 
     function setHook(address hook, bool flag) external override onlyRole(PLATFORM_ADMIN_ROLE) {
         whitelistHooks[hook] = flag;
+        if (flag) {
+            emit LogHookWhiteListed(hook);
+        } else {
+            emit LogHookBlackListed(hook);
+        }
     }
 
     function addHookForToken(address token, address hook, bytes calldata data) external override onlyProjectAdmin(token) {
         require(whitelistHooks[hook], "not whitelist");
         tokenHooks[token].push(hook);
         IHook(hook).registerHook(token, data);
+        emit LogHookRegistered(token, hook, data);
     }
 
     function addHooksForToken(address token, address[] calldata hooks, bytes[] calldata datas) external override onlyProjectAdmin(token) {

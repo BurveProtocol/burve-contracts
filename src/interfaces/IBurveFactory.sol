@@ -171,9 +171,29 @@ interface IBurveFactory {
      *  @param flag true for whitelist, false for blacklist
      */
     function setHook(address hook, bool flag) external;
+    
+    /** Deploy a new token with the specified `TokenInfo` and hooks
+    * @param token The information of the token to be deployed
+    * @param mintfirstAmount The first amount of the token to be minted.
+    * @param hooks the addresses of hooks
+    * @param datas the parameters of hooks
+    */
+    function deployTokenWithHooks(TokenInfo calldata token, uint256 mintfirstAmount, address[] calldata hooks, bytes[] calldata datas) external payable returns (address);
 
+    /**
+     * Add a hook for existed token
+     * @param token the address of token 
+     * @param hook  the address of hook
+     * @param data the parameters of hook
+     */
     function addHookForToken(address token, address hook, bytes calldata data) external;
 
+    /**
+     * Add hooks for existed token
+     * @param token the address of token 
+     * @param hooks  the addresses of hooks
+     * @param datas the parameters of hooks
+     */
     function addHooksForToken(address token, address[] calldata hooks, bytes[] calldata datas) external;
 
     function removeHookForToken(address token, address hook) external;
@@ -196,4 +216,7 @@ interface IBurveFactory {
     event LogRouteChanged(address newRoute);
 
     event LogPlatformTaxChanged();
+    event LogHookWhiteListed(address hook);
+    event LogHookBlackListed(address hook);
+    event LogHookRegistered(address token, address hook, bytes data);
 }

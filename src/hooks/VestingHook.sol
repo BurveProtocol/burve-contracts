@@ -3,6 +3,9 @@ pragma solidity ^0.8.0;
 import "./BaseHook.sol";
 
 contract VestingHook is BaseHook {
+    
+    string public constant hookName = "Vesting";
+    string public constant parameterEncoder = "(uint256,uint256)";
     constructor(address factory) BaseHook(factory) {}
 
     mapping(address => uint256) public vestingDaysMap;

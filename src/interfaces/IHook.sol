@@ -3,6 +3,9 @@
 pragma solidity ^0.8.0;
 
 interface IHook {
+
+    function hookName() external pure returns (string memory);
+    function parameterEncoder() external pure returns (string memory);
     function registerHook(address token, bytes calldata data) external;
 
     function unregisterHook(address token) external;

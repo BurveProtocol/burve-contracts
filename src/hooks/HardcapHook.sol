@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import "./BaseHook.sol";
 
 contract HardcapHook is BaseHook {
+    string public constant hookName = "Hardcap";
+    string public constant parameterEncoder = "(uint256)";
     constructor(address factory) BaseHook(factory) {}
 
     mapping(address => uint256) capMap;
@@ -21,6 +23,7 @@ contract HardcapHook is BaseHook {
     }
 
     function beforeMintHook(address, address, uint256 amount) external view override {
-        require(IERC20(msg.sender).totalSupply() + amount <= capMap[msg.sender],"capped");
+        require(IERC20(msg.sender).totalSupply() + amount <= capMap[msg.sender], "capped");
     }
+
 }

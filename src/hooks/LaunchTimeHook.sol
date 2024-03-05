@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import "./BaseHook.sol";
 
 contract LaunchTimeHook is BaseHook {
+    string public constant hookName = "LaunchTime";
+    string public constant parameterEncoder = "(uint256)";
     constructor(address factory) BaseHook(factory) {}
 
     mapping(address => uint256) timeMap;

@@ -20,7 +20,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     address internal _projectTreasury;
     address internal _projectAdmin;
     IBurveFactory internal _factory;
-    bool private _boolSlot = false;//temporary useless
+    bool private _boolSlot = false; //temporary useless
     uint256 internal constant MAX_TAX_RATE_DENOMINATOR = 10000;
     uint256 internal constant MAX_PROJECT_TAX_RATE = 5000;
     uint256 internal _projectMintTax = 0;
@@ -150,15 +150,9 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function mint(address to, uint payAmount, uint minReceive) public payable virtual whenNotPaused nonReentrant {
         require(to != address(0), "can not mint to address(0)");
-        _transferFromInternal(msg.sender, payAmount);
-        uint256 tokenAmount;
 
-        (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
-        uint256 projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
-        uint256 platformFee = (payAmount * _platformMintTax) / MAX_TAX_RATE_DENOMINATOR;
-        uint256 payAmountActual = payAmount - projectFee - platformFee;
-        // Calculate the actual amount through Bonding Curve
-        (tokenAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, _getCurrentSupply());
+        uint256 actualAmount = _transferFromInternal(msg.sender, payAmount);
+        (uint256 tokenAmount, uint256 payAmountActual, uint256 platformFee, uint256 projectFee) = estimateMint(actualAmount);
         require(tokenAmount >= minReceive, "Mint: mint amount less than minimal expect recieved");
         address[] memory hooks = getHooks();
         for (uint256 i = 0; i < hooks.length; i++) {
@@ -177,8 +171,9 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
         projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
         platformFee = (payAmount * _platformMintTax) / MAX_TAX_RATE_DENOMINATOR;
-        (receivedAmount, ) = _calculateMintAmountFromBondingCurve(payAmount - projectFee - platformFee, _getCurrentSupply());
-        return (receivedAmount, payAmount, platformFee, projectFee);
+        uint256 payAmountActual = payAmount - projectFee - platformFee;
+        (receivedAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, _getCurrentSupply());
+        return (receivedAmount, payAmountActual, platformFee, projectFee);
     }
 
     function estimateMintNeed(uint tokenAmountWant) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
@@ -195,13 +190,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         require(to != address(0), "can not burn to address(0)");
         // require(msg.value == 0, "Burn: dont need to attach ether");
         address from = _msgSender();
-        // Calculate the actual amount through Bonding Curve
-        (, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
-        (, uint256 amountReturn) = _calculateBurnAmountFromBondingCurve(payAmount, _getCurrentSupply());
-
-        uint256 projectFee = (amountReturn * _projectBurnTax) / MAX_TAX_RATE_DENOMINATOR;
-        uint256 platformFee = (amountReturn * _platformBurnTax) / MAX_TAX_RATE_DENOMINATOR;
-        amountReturn = amountReturn - projectFee - platformFee;
+        (, uint256 amountReturn, uint256 platformFee, uint256 projectFee) = estimateBurn(payAmount);
         require(amountReturn >= minReceive, "Burn: payback amount less than minimal expect recieved");
         address[] memory hooks = getHooks();
         for (uint256 i = 0; i < hooks.length; i++) {
@@ -231,11 +220,14 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return _price(_getCurrentSupply());
     }
 
-    function _transferFromInternal(address account, uint256 amount) internal virtual {
+    function _transferFromInternal(address account, uint256 amount) internal virtual returns (uint256 actualAmount) {
         if (_raisingToken == address(0)) {
             require(amount <= msg.value, "invalid value");
+            return amount;
         } else {
+            uint256 balanceBefore = IERC20(_raisingToken).balanceOf(address(this));
             IERC20(_raisingToken).safeTransferFrom(account, address(this), amount);
+            actualAmount = IERC20(_raisingToken).balanceOf(address(this)) - balanceBefore;
         }
     }
 
