@@ -16,8 +16,8 @@ abstract contract SwapCurve {
     function baseDecimals() internal view virtual returns (uint8);
 
     function _changeCoinMaker(address newBonding) internal {
-        _coinMaker = IBondingCurve(newBonding);
         emit LogCoinMakerChanged(address(_coinMaker), newBonding);
+        _coinMaker = IBondingCurve(newBonding);
     }
 
     function _calculateMintAmountFromBondingCurve(uint256 tokens, uint256 totalSupply) internal view virtual returns (uint256, uint256) {
