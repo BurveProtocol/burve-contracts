@@ -35,7 +35,7 @@ contract HooksTest is BaseTest {
         factory.addHookForToken(address(currentToken), address(hook), abi.encode(block.timestamp + 1 days));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
-        vm.prank(user1);
+        vm.startPrank(user1);
         vm.expectRevert("not launch yet");
         currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
         vm.warp(block.timestamp + 1 days);
@@ -47,17 +47,16 @@ contract HooksTest is BaseTest {
         VestingHook hook = new VestingHook(address(factory));
         deployNewHook(address(hook));
         vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether,1));
+        factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether, 1));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.prank(user1);
         currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
         vm.expectRevert("vesting");
         vm.prank(user1);
-        currentToken.burn(user1, 1 ether,0);
+        currentToken.burn(user1, 1 ether, 0);
     }
 
-    
     function testSBT() public {
         deployNewERC20(100, 100, 1000, 0.001 ether);
         SBTHook hook = new SBTHook(address(factory));

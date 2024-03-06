@@ -44,11 +44,19 @@ abstract contract BaseTest is Test {
         vm.label(user1, "user1");
         vm.label(user2, "user2");
         vm.stopPrank();
+        
+
+        vm.deal(projectTreasury, 0);
+        vm.deal(platformTreasury, 0);
+        vm.deal(user1, type(uint256).max);
+        vm.deal(user2, type(uint256).max);
+        vm.deal(user3, type(uint256).max);
     }
 
     function deployNewERC20(uint256 mintTax, uint256 burnTax, uint256 A, uint256 initPrice) public returns (BurveERC20Mixed) {
         uint256 a = initPrice;
-        uint256 b = ((A * 1 ether) / a) * 1e18;
+        uint256 b = ((A * 1e18) / a) * 1e18;
+        console.log(a, b);
         bytes memory data = abi.encode(a, b);
         IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
             tokenType: "ERC20",

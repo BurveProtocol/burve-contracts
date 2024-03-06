@@ -20,15 +20,9 @@ contract ExpMixedTest is BaseTest {
         data = abi.encode(a, b);
         curve = ExpMixedBondingSwap(factory.getBondingCurveImplement(bondingCurveType));
         deployNewERC20(0, 0, A, a);
-
-        vm.deal(projectTreasury, 0);
-        vm.deal(platformTreasury, 0);
-        vm.deal(user1, type(uint256).max);
-        vm.deal(user2, type(uint256).max);
-        vm.deal(user3, type(uint256).max);
     }
 
-    function testOne(uint256 currentSupply, uint256 nativeAsset, string calldata calltype) external {
+    function _one(uint256 currentSupply, uint256 nativeAsset, string calldata calltype) external view {
         (uint256 tokenAmount1, uint256 raisingTokenAmount1) = curve.calculateMintAmountFromBondingCurve(nativeAsset, currentSupply, data);
         (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, currentSupply + tokenAmount1, data);
         uint256 price = curve.price(currentSupply + tokenAmount1, data);
@@ -69,15 +63,19 @@ contract ExpMixedTest is BaseTest {
         uint256 supplyLower = 100000 ether;
         bool tvlFlag = true;
         bool supplyFlag = true;
-        for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); tvlFlag || supplyFlag; (i, j, count) = ((i * 11) / 10, (j * 11) / 10, count + 1)) {
+        for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); (tvlFlag && i <= type(uint256).max / 10) || (supplyFlag && j <= type(uint256).max / 10); count = count + 1) {
             console.log("--------------count--------------", count);
-            if (tvlFlag) {
-                try this.testOne(0, i, "tvl") {} catch {
+            if (tvlFlag && i <= type(uint256).max / 10) {
+                try this._one(0, i, "tvl") {
+                    i = ((i / 10) * 11);
+                } catch {
                     tvlFlag = false;
                 }
             }
-            if (supplyFlag) {
-                try this.testOne(j, 1 ether, "supply") {} catch {
+            if (supplyFlag && j <= type(uint192).max) {
+                try this._one(j, 1 ether, "supply") {
+                    j = ((j / 10) * 11);
+                } catch {
                     supplyFlag = false;
                 }
             }
