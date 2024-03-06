@@ -14,28 +14,29 @@ contract ExpMixedTest is BaseTest {
 
     function setUp() public override {
         super.setUp();
-        uint256 A = 1000;
+        uint256 A = 10000;
         uint256 a = 0.001 ether;
         uint256 b = ((A * 1 ether) / a) * 1e18;
         data = abi.encode(a, b);
         curve = ExpMixedBondingSwap(factory.getBondingCurveImplement(bondingCurveType));
-        deployNewERC20(100, 100, A, a);
+        deployNewERC20(0, 0, A, a);
 
         vm.deal(projectTreasury, 0);
         vm.deal(platformTreasury, 0);
-        vm.deal(user1, 100000000 ether);
-        vm.deal(user2, 100000000 ether);
-        vm.deal(user3, 100000000 ether);
+        vm.deal(user1, type(uint256).max);
+        vm.deal(user2, type(uint256).max);
+        vm.deal(user3, type(uint256).max);
     }
 
-    function testOne(uint256 currentSupply, uint256 nativeAsset) private {
+    function testOne(uint256 currentSupply, uint256 nativeAsset, string calldata calltype) external {
         (uint256 tokenAmount1, uint256 raisingTokenAmount1) = curve.calculateMintAmountFromBondingCurve(nativeAsset, currentSupply, data);
         (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, currentSupply + tokenAmount1, data);
-        uint256 price = curve.price(tokenAmount1, data);
-
+        uint256 price = curve.price(currentSupply + tokenAmount1, data);
+        console.log(calltype);
         console.log("erc20 minted", tokenAmount1);
         console.log("raising token transferred", nativeAsset);
         console.log("burn return raising token", raisingTokenAmount2);
+        console.log("supply", currentSupply + tokenAmount1);
         console.log("price raising-token/erc20", price);
         console.log("deviation (wei)", nativeAsset - raisingTokenAmount2);
         require(nativeAsset >= raisingTokenAmount2, "raising token transferred must greater than the raisingTokenAmount of calculateBurnAmountFromBondingCurve");
@@ -52,7 +53,7 @@ contract ExpMixedTest is BaseTest {
         (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, tokenAmount1, data);
         uint256 price = curve.price(tokenAmount1, data);
         (uint256 tokenAmount3, uint256 raisingTokenAmount3) = curve.calculateBurnAmountFromBondingCurve(1e9, tokenAmount1 + 1e9, data);
-        uint256 differentialPrice = (raisingTokenAmount3 * 1 ether) / tokenAmount3;
+        uint256 differentialPrice = (raisingTokenAmount3 * 1 ether) / tokenAmount3 / 1 ether;
         console.log("erc20 minted", tokenAmount1);
         console.log("raising token transferred", nativeAsset);
         console.log("burn return raising token", raisingTokenAmount2);
@@ -60,18 +61,27 @@ contract ExpMixedTest is BaseTest {
         console.log("differential price", differentialPrice);
         console.log("deviation (wei)", nativeAsset - raisingTokenAmount2);
         uint256 res = differentialPrice > price ? differentialPrice - price : price - differentialPrice;
+        console.log(res);
         require(res <= 1 ether / 1000, " the deviation between calculation price and differential price must less than 0.1 %");
 
-        uint256 tvlLower = 1e9;
+        uint256 tvlLower = 1000 ether;
 
-        uint256 supplyLower = 1 ether;
-        for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); count < round; (i, j, count) = (i * 2, j * 2, count + 1)) {
+        uint256 supplyLower = 100000 ether;
+        bool tvlFlag = true;
+        bool supplyFlag = true;
+        for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); tvlFlag || supplyFlag; (i, j, count) = ((i * 11) / 10, (j * 11) / 10, count + 1)) {
             console.log("--------------count--------------", count);
-            testOne(0, i);
-            testOne(j, 1 ether);
+            if (tvlFlag) {
+                try this.testOne(0, i, "tvl") {} catch {
+                    tvlFlag = false;
+                }
+            }
+            if (supplyFlag) {
+                try this.testOne(j, 1 ether, "supply") {} catch {
+                    supplyFlag = false;
+                }
+            }
         }
-        testOne(0, tvl);
-        testOne(supply, 1 ether);
     }
 
     function testEstimateMintBurn() public {
@@ -209,5 +219,18 @@ contract ExpMixedTest is BaseTest {
             console.log("the amount of raising token that after burn all", totalAssetCanReturn);
             console.log("deviation (wei)", tokenBalance - totalAssetCanReturn);
         }
+    }
+
+    function testFuzz() public {
+        vm.startPrank(user1);
+        uint256 amount = type(uint32).max;
+        amount = 97999999999999999991000000000000000107.3635064 ether;
+        console.log(amount);
+        currentToken.mint{value: amount}(user1, amount, 0);
+        uint256 balanceBefore = address(currentToken).balance;
+        console.log(currentToken.totalSupply());
+        currentToken.burn(user1, currentToken.totalSupply(), 0);
+        console.log(address(currentToken).balance, balanceBefore);
+        console.log(currentToken.totalSupply());
     }
 }

@@ -15,7 +15,7 @@ contract BurveDeployScript is BaseScript {
     uint256 deployerKey;
     BurveTokenFactory factory;
     ProxyAdmin admin;
-
+    
     function setUp() public {}
 
     function deploy() public {
@@ -45,6 +45,14 @@ contract BurveDeployScript is BaseScript {
         startBroadcast(deployerKey);
         BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
         factory.updateBurveImplement("ERC20", address(erc20Impl));
+        stopBroadcast();
+    }
+
+    function upgradeCurveImplement() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        startBroadcast(deployerKey);
+        ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
+        factory.addBondingCurveImplement(address(exp));
         stopBroadcast();
     }
 
