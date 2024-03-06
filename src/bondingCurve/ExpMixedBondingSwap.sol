@@ -26,7 +26,7 @@ contract ExpMixedBondingSwap is IBondingCurve {
         bytes16 abdk_raisingTokenAmount = ABDKMathQuad.fromUInt(raisingTokenAmount);
         bytes16 abdk_tokenCurrentSupply = ABDKMathQuad.fromUInt(tokenCurrentSupply);
         bytes16 fabdk_e_index = abdk_tokenCurrentSupply.div(abdk_b);
-        bytes16 fabdk_e_mod = abdk_raisingTokenAmount.div(abdk_b).div(abdk_a);
+        bytes16 fabdk_e_mod = abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_b).div(abdk_a);
         bytes16 fabdk_x = (fabdk_e_index.exp().add(fabdk_e_mod)).ln();
         require(fabdk_x >= 0);
         tokenAmount = fabdk_x.mul(abdk_b).toUInt() - tokenCurrentSupply;
@@ -46,7 +46,7 @@ contract ExpMixedBondingSwap is IBondingCurve {
         bytes16 fabdk_e_index_0 = abdk_tokenCurrentSupply.sub(abdk_tokenAmount).div(abdk_b);
         bytes16 fabdk_y = fabdk_e_index_1.exp().sub(fabdk_e_index_0.exp());
         require(fabdk_y >= 0);
-        raisingTokenAmount = fabdk_y.mul(abdk_a).mul(abdk_b).toUInt();
+        raisingTokenAmount = fabdk_y.mul(abdk_a).mul(abdk_b).div(ABDKMathQuad.fromUInt(1e18)).toUInt();
         return (tokenAmount, raisingTokenAmount);
     }
 

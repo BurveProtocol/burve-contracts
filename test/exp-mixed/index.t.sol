@@ -10,12 +10,12 @@ contract ExpMixedTest is BaseTest {
     uint256 tvl = 2000 ether;
     ExpMixedBondingSwap curve;
     bytes data;
-    uint256 round = 10;
+    uint256 round = 100;
 
     function setUp() public override {
         super.setUp();
-        uint256 A = 10000;
-        uint256 a = 0.001 ether;
+        uint256 A = 1000;
+        uint256 a = 0.01 ether;
         uint256 b = ((A * 1 ether) / a) * 1e18;
         data = abi.encode(a, b);
         curve = ExpMixedBondingSwap(factory.getBondingCurveImplement(bondingCurveType));
@@ -45,9 +45,9 @@ contract ExpMixedTest is BaseTest {
         uint256 nativeAsset = tvl;
         (uint256 tokenAmount1, uint256 raisingTokenAmount1) = curve.calculateMintAmountFromBondingCurve(nativeAsset, 0, data);
         (uint256 tokenAmount2, uint256 raisingTokenAmount2) = curve.calculateBurnAmountFromBondingCurve(tokenAmount1, tokenAmount1, data);
-        uint256 price = curve.price(tokenAmount1, data);
         (uint256 tokenAmount3, uint256 raisingTokenAmount3) = curve.calculateBurnAmountFromBondingCurve(1e9, tokenAmount1 + 1e9, data);
-        uint256 differentialPrice = (raisingTokenAmount3 * 1 ether) / tokenAmount3 / 1 ether;
+        uint256 price = curve.price(tokenAmount1, data);
+        uint256 differentialPrice = curve.price(tokenAmount1 + 1e9, data);
         console.log("erc20 minted", tokenAmount1);
         console.log("raising token transferred", nativeAsset);
         console.log("burn return raising token", raisingTokenAmount2);
@@ -55,15 +55,16 @@ contract ExpMixedTest is BaseTest {
         console.log("differential price", differentialPrice);
         console.log("deviation (wei)", nativeAsset - raisingTokenAmount2);
         uint256 res = differentialPrice > price ? differentialPrice - price : price - differentialPrice;
-        console.log(res);
         require(res <= 1 ether / 1000, " the deviation between calculation price and differential price must less than 0.1 %");
-
         uint256 tvlLower = 1000 ether;
 
         uint256 supplyLower = 100000 ether;
         bool tvlFlag = true;
         bool supplyFlag = true;
         for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); (tvlFlag && i <= type(uint256).max / 10) || (supplyFlag && j <= type(uint256).max / 10); count = count + 1) {
+            if (count==200){
+                break;
+            }
             console.log("--------------count--------------", count);
             if (tvlFlag && i <= type(uint256).max / 10) {
                 try this._one(0, i, "tvl") {
@@ -182,40 +183,41 @@ contract ExpMixedTest is BaseTest {
                 uint256 user3Erc20 = currentToken.balanceOf(user3);
                 if (user3Erc20 >= 0.1 ether) {
                     vm.prank(user3);
+                    uint256 platformBalance = platformTreasury.balance;
+                    uint256 treasuryBalance = projectTreasury.balance;
+                    uint256 tokenBalance = address(currentToken).balance;
+                    uint256 user1Balance = user1.balance;
+                    uint256 erc20Balance1 = currentToken.balanceOf(user1);
+                    uint256 user2Balance = user2.balance;
+                    uint256 erc20Balance2 = currentToken.balanceOf(user2);
+                    uint256 user3Balance = user3.balance;
+                    uint256 erc20Balance3 = currentToken.balanceOf(user3);
+
+                    uint256 contractTotalSupply = currentToken.totalSupply();
+
+                    uint256 price = currentToken.price();
+
+                    console.log("----------round---------", i);
+                    console.log("platform treasury balance", platformBalance);
+                    console.log("project treasury balance", treasuryBalance);
+
+                    console.log("token contract balance", tokenBalance);
+                    console.log("price raising-token/erc20", price);
+                    console.log("user 1 balance", user1Balance);
+                    console.log("user 1 token balance", erc20Balance1);
+                    console.log("user 2 balance", user2Balance);
+                    console.log("user 2 token balance", erc20Balance2);
+                    console.log("user 3 balance", user3Balance);
+                    console.log("user 3 token balance", erc20Balance3);
+
+                    (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(contractTotalSupply);
+                    vm.prank(user3);
                     currentToken.burn(user3, (user3Erc20 * ((randomSeed % 99) + 1)) / 100, 0);
+                    uint256 totalAssetCanReturn = amountReturn + platformFee + projectFee;
+                    console.log("the amount of raising token that after burn all", totalAssetCanReturn);
+                    console.log("deviation (wei)", tokenBalance - totalAssetCanReturn);
                 }
             }
-            uint256 platformBalance = platformTreasury.balance;
-            uint256 treasuryBalance = projectTreasury.balance;
-            uint256 tokenBalance = address(currentToken).balance;
-            uint256 user1Balance = user1.balance;
-            uint256 erc20Balance1 = currentToken.balanceOf(user1);
-            uint256 user2Balance = user2.balance;
-            uint256 erc20Balance2 = currentToken.balanceOf(user2);
-            uint256 user3Balance = user3.balance;
-            uint256 erc20Balance3 = currentToken.balanceOf(user3);
-
-            uint256 contractTotalSupply = currentToken.totalSupply();
-            (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(contractTotalSupply);
-
-            uint256 price = currentToken.price();
-
-            console.log("----------round---------", i);
-            console.log("platform treasury balance", platformBalance);
-            console.log("project treasury balance", treasuryBalance);
-
-            console.log("token contract balance", tokenBalance);
-            console.log("price raising-token/erc20", price);
-            console.log("user 1 balance", user1Balance);
-            console.log("user 1 token balance", erc20Balance1);
-            console.log("user 2 balance", user2Balance);
-            console.log("user 2 token balance", erc20Balance2);
-            console.log("user 3 balance", user3Balance);
-            console.log("user 3 token balance", erc20Balance3);
-            uint256 totalAssetCanReturn = amountReturn + platformFee + projectFee;
-
-            console.log("the amount of raising token that after burn all", totalAssetCanReturn);
-            console.log("deviation (wei)", tokenBalance - totalAssetCanReturn);
         }
     }
 
