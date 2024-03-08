@@ -97,6 +97,7 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         for (uint256 i = 0; i < hooks.length; i++) {
             require(whitelistHooks[hooks[i]], "not whitelist");
             IHook(hooks[i]).registerHook(proxy, datas[i]);
+            emit LogHookRegistered(proxy, hooks[i], datas[i]);
         }
         return proxy;
     }

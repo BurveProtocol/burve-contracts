@@ -80,6 +80,7 @@ contract BurveDeployScript is BaseScript {
     function upgrade11() public {
         upgradeBurveImplement();
         upgradeFactoryImplement();
+        upgradeCurveImplement();
         deployHooks();
     }
 }
