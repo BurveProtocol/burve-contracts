@@ -28,7 +28,7 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
         _setMetadata(metadata);
         _bondingCurveParameters = parameters;
         _raisingToken = raisingTokenAddr;
-        _setProjectTaxRate(projectMintTax, projectBurnTax);
+        _initTaxRate(projectMintTax, projectBurnTax);
 
         _setupRole(FACTORY_ROLE, factory);
 
