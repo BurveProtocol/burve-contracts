@@ -126,6 +126,8 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function _initTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
+        require((MAX_PROJECT_TAX_RATE >= projectMintTax), "SetTax:Project Mint Tax Rate must between 0% to 50%");
+        require((MAX_PROJECT_TAX_RATE >= projectBurnTax), "SetTax:Project Burn Tax Rate must between 0% to 50%");
         (uint256 _platformMintTax, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
         require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
@@ -135,8 +137,8 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function _setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
-        require((MAX_PROJECT_TAX_RATE >= projectMintTax && projectMintTax >= 0 && (_projectMintTax >= projectMintTax)), "SetTax:Project Mint Tax Rate must lower than before or between 0% to 50%");
-        require((MAX_PROJECT_TAX_RATE >= projectBurnTax && projectBurnTax >= 0 && (_projectBurnTax >= projectBurnTax)), "SetTax:Project Burn Tax Rate must lower than before or between 0% to 50%");
+        require((MAX_PROJECT_TAX_RATE >= projectMintTax && (_projectMintTax >= projectMintTax)), "SetTax:Project Mint Tax Rate must lower than before or between 0% to 50%");
+        require((MAX_PROJECT_TAX_RATE >= projectBurnTax && (_projectBurnTax >= projectBurnTax)), "SetTax:Project Burn Tax Rate must lower than before or between 0% to 50%");
         (uint256 _platformMintTax, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
         require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
