@@ -3,17 +3,39 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IBurveRoute.sol";
 import "./interfaces/IBurveToken.sol";
+import "./interfaces/IBurveFactory.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 contract BurveRoute is IBurveRoute {
     using SafeERC20 for IERC20;
+    IBurveFactory public immutable factory;
+
+    constructor(address _factory) {
+        factory = IBurveFactory(_factory);
+    }
+
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "expired");
         _;
     }
 
-    function swap(address fromTokenAddr, address toTokenAddr, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+    function swap(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+        address fromToken = factory.getToken(fromTokenIndex);
+        address toToken = factory.getToken(toTokenIndex);
+        require(fromToken != address(0) && toToken != address(0), "invalid token");
+        swap(fromToken, toToken, amount, minReturn, to);
+    }
+
+    function swapSupportFeeOnTransfer(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+        address fromToken = factory.getToken(fromTokenIndex);
+        address toToken = factory.getToken(toTokenIndex);
+        require(fromToken != address(0) && toToken != address(0), "invalid token");
+        swapSupportFeeOnTransfer(fromToken, toToken, amount, minReturn, to);
+    }
+
+    function swap(address fromTokenAddr, address toTokenAddr, uint256 amount, uint256 minReturn, address to) private {
+        // factory.token
         IBurveToken fromToken = IBurveToken(fromTokenAddr);
         IBurveToken toToken = IBurveToken(toTokenAddr);
         (uint tokenReceived, uint raisingTokenAmount) = getAmountOut(fromTokenAddr, toTokenAddr, amount);
@@ -27,7 +49,7 @@ contract BurveRoute is IBurveRoute {
         toToken.mint{value: raisingToken == address(0) ? raisingTokenAmount : 0}(address(to), raisingTokenAmount, tokenReceived);
     }
 
-    function swapSupportFeeOnTransfer(address fromTokenAddr, address toTokenAddr, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+    function swapSupportFeeOnTransfer(address fromTokenAddr, address toTokenAddr, uint256 amount, uint256 minReturn, address to) private {
         IBurveToken fromToken = IBurveToken(fromTokenAddr);
         IBurveToken toToken = IBurveToken(toTokenAddr);
         address raisingToken = IBurveToken(fromTokenAddr).getRaisingToken();

@@ -10,6 +10,7 @@ import "../src/hooks/HardcapHook.sol";
 import "../src/hooks/SBTHook.sol";
 import "../src/hooks/VestingHook.sol";
 import "../src/hooks/LaunchTimeHook.sol";
+import "../src/test/TestERC20.sol";
 
 contract BurveDeployScript is BaseScript {
     uint256 deployerKey;
@@ -23,11 +24,11 @@ contract BurveDeployScript is BaseScript {
         address deployer = vm.addr(deployerKey);
         vm.startBroadcast(deployerKey);
         admin = new ProxyAdmin();
-        BurveRoute route = new BurveRoute();
         BurveTokenFactory factoryImpl = new BurveTokenFactory();
-        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, deployer, 0x84144F83Cb91EE0a17799719eB9587B72C071aF3, address(route));
+        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, deployer, 0x8A34e677a19C3825eBDE386f1a48Be49D62D03D7, address(0));
         TransparentUpgradeableProxy factoryProxy = new TransparentUpgradeableProxy(address(factoryImpl), address(admin), factoryInitData);
         factory = BurveTokenFactory(payable(factoryProxy));
+        BurveRoute route = new BurveRoute(address(factory));
         ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
         factory.addBondingCurveImplement(address(exp));
         BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
@@ -38,6 +39,19 @@ contract BurveDeployScript is BaseScript {
         logAddr(address(factoryImpl), "Burve Factory Implement");
         logAddr(address(exp), string.concat(exp.BondingCurveType(), " Bonding Curve"));
         stopBroadcast();
+    }
+
+    function deployMockToken() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        address deployer = vm.addr(deployerKey);
+        vm.startBroadcast(deployerKey);
+        console.log(address(new TestERC20()));
+        vm.stopBroadcast();
+    }
+
+    function deploy11() public {
+        deploy();
+        deployHooks();
     }
 
     function upgradeBurveImplement() public {
@@ -82,5 +96,31 @@ contract BurveDeployScript is BaseScript {
         upgradeFactoryImplement();
         upgradeCurveImplement();
         deployHooks();
+    }
+
+    function transferOwnership() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        startBroadcast(deployerKey);
+        address newAdmin = 0x8A34e677a19C3825eBDE386f1a48Be49D62D03D7;
+        factory.setPlatformTreasury(newAdmin);
+        factory.setPlatformAdmin(newAdmin);
+        admin.transferOwnership(newAdmin);
+        vm.stopBroadcast();
+    }
+
+    function deployBurveImplement() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        startBroadcast(deployerKey);
+        BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
+        console.log(address(erc20Impl));
+        stopBroadcast();
+    }
+
+    function deployRoute() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        startBroadcast(deployerKey);
+        BurveRoute route = new BurveRoute(address(factory));
+        console.log("route", address(route));
+        stopBroadcast();
     }
 }
