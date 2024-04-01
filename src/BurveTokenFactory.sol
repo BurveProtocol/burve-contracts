@@ -8,7 +8,7 @@ import "openzeppelin/token/ERC20/IERC20.sol";
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin/proxy/Clones.sol";
 import "./interfaces/IBurveFactory.sol";
-import "./interfaces/IBurveToken.sol";
+import "./interfaces/IBurveTokenPausable.sol";
 import "./interfaces/IBondingCurve.sol";
 import "./interfaces/IHook.sol";
 
@@ -164,6 +164,30 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         require(newPlatformTreasury != address(0), "Invalid Address");
         _platformTreasury = newPlatformTreasury;
         emit LogPlatformTreasuryChanged(newPlatformTreasury);
+    }
+
+    function pause(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
+        IBurveTokenPausable(proxyAddress).pause();
+    }
+
+    function unpause(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
+        IBurveTokenPausable(proxyAddress).unpause();
+    }
+
+    function requestUpgrade(address proxyAddress, bytes calldata data) external onlyRole(PLATFORM_ADMIN_ROLE) {
+        string memory tokenType = tokensType[proxyAddress];
+        address tokenImpl = getBurveImplement(tokenType);
+        require(tokenImpl != _proxyAdmin.getProxyImplementation(ITransparentUpgradeableProxy(payable(proxyAddress))), "Upgrade Failed: Same Implement");
+        upgradeTimelock[proxyAddress] = block.timestamp + 2 days;
+        upgradeList[proxyAddress] = abi.encode(tokenImpl, data);
+        emit LogTokenUpgradeRequested(proxyAddress, upgradeTimelock[proxyAddress], tokenImpl, msg.sender, data);
+    }
+
+    function rejectUpgrade(address proxyAddress, string calldata reason) external onlyProjectAdmin(proxyAddress) {
+        require(upgradeTimelock[proxyAddress] != 0, "project have no upgrade");
+        upgradeTimelock[proxyAddress] = 0;
+        upgradeList[proxyAddress] = new bytes(0);
+        emit LogTokenUpgradeRejected(proxyAddress, msg.sender, reason);
     }
 
     /**

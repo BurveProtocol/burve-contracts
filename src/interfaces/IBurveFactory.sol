@@ -132,6 +132,32 @@ interface IBurveFactory {
     function getPlatformTreasury() external view returns (address);
 
     /**
+     * Pause a token.
+     * @param proxyAddress the address of the token's proxy.
+     */
+    function pause(address proxyAddress) external;
+
+    /**
+     * Unpause a token.
+     * @param proxyAddress the address of the token's proxy.
+     */
+    function unpause(address proxyAddress) external;
+
+    /**
+     * Request an upgrade for a token's implementation.
+     * @param proxyAddress the address of the token's proxy.
+     * @param data additional data for the upgrade request.
+     */
+    function requestUpgrade(address proxyAddress, bytes calldata data) external;
+
+    /**
+     * Reject an upgrade request for a token.
+     * @param proxyAddress the address of the token's proxy.
+     * @param reason the reason for rejection.
+     */
+    function rejectUpgrade(address proxyAddress, string calldata reason) external;
+
+    /**
      * Upgrade a token's implementation.
      * @param proxyAddress the address of the token's proxy.
      */
@@ -175,7 +201,9 @@ interface IBurveFactory {
     function removeAllHookForToken(address token) external;
 
     event LogTokenDeployed(string tokenType, string bondingCurveType, uint256 tokenId, address deployedAddr);
-    
+
+    event LogTokenUpgradeRequested(address proxyAddress, uint256 timelock, address implementAddr, address requester, bytes data);
+    event LogTokenUpgradeRejected(address proxyAddress, address rejecter, string reason);
     event LogTokenImplementUpgraded(address proxyAddress, string tokenType, address implementAddr);
 
     event LogTokenTypeImplAdded(string tokenType, address impl);
