@@ -49,7 +49,6 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
-        require(!paused(), "ERC20Pausable: token transfer while paused");
         address[] memory hooks = getHooks();
         for (uint256 i = 0; i < hooks.length; i++) {
             IHook(hooks[i]).beforeTransferHook(from, to, amount);

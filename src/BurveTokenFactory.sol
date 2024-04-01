@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import "openzeppelin/access/AccessControl.sol";
 import "openzeppelin-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "openzeppelin/proxy/Clones.sol";
 import "./interfaces/IBurveFactory.sol";
 import "./interfaces/IBurveToken.sol";
 import "./interfaces/IBondingCurve.sol";
@@ -14,6 +14,7 @@ import "./interfaces/IHook.sol";
 
 contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
     using SafeERC20 for IERC20;
+    using Clones for address;
     bytes32 public constant PLATFORM_ADMIN_ROLE = keccak256("PLATFORM_ADMIN");
 
     mapping(string => address) private _implementsMap;
@@ -60,34 +61,21 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
     }
 
     function deployToken(TokenInfo calldata token, uint256 mintfirstAmount) public payable returns (address) {
-        bytes memory call = abi.encodeWithSelector(
-            IBurveToken.initialize.selector,
-            getBondingCurveImplement(token.bondingCurveType),
-            token.name,
-            token.symbol,
-            token.metadata,
-            token.projectAdmin,
-            token.projectTreasury,
-            token.projectMintTax,
-            token.projectBurnTax,
-            token.raisingTokenAddr,
-            token.data,
-            address(this)
-        );
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(getBurveImplement(token.tokenType), address(_proxyAdmin), call);
+        address tokenAddr = getBurveImplement(token.tokenType).clone();
+        IBurveToken(tokenAddr).initialize(getBondingCurveImplement(token.bondingCurveType), token.name, token.symbol, token.metadata, token.projectAdmin, token.projectTreasury, token.projectMintTax, token.projectBurnTax, token.raisingTokenAddr, token.data, address(this));
         uint256 tokenId = tokensLength;
-        tokens[tokensLength] = address(proxy);
+        tokens[tokensLength] = tokenAddr;
         tokensLength++;
-        tokensType[address(proxy)] = token.tokenType;
+        tokensType[tokenAddr] = token.tokenType;
         if (mintfirstAmount > 0) {
             if (token.raisingTokenAddr != address(0)) {
                 IERC20(token.raisingTokenAddr).safeTransferFrom(msg.sender, address(this), mintfirstAmount);
-                IERC20(token.raisingTokenAddr).safeApprove(address(proxy), mintfirstAmount);
+                IERC20(token.raisingTokenAddr).safeApprove(tokenAddr, mintfirstAmount);
             }
-            IBurveToken(address(proxy)).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, 0);
+            IBurveToken(tokenAddr).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, 0);
         }
-        emit LogTokenDeployed(token.tokenType, token.bondingCurveType, tokenId, address(proxy));
-        return address(proxy);
+        emit LogTokenDeployed(token.tokenType, token.bondingCurveType, tokenId, tokenAddr);
+        return tokenAddr;
     }
 
     function deployTokenWithHooks(TokenInfo calldata token, uint256 mintfirstAmount, address[] calldata hooks, bytes[] calldata datas) public payable returns (address) {
@@ -178,30 +166,6 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         emit LogPlatformTreasuryChanged(newPlatformTreasury);
     }
 
-    function pause(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
-        IBurveToken(proxyAddress).pause();
-    }
-
-    function unpause(address proxyAddress) external override onlyRole(PLATFORM_ADMIN_ROLE) {
-        IBurveToken(proxyAddress).unpause();
-    }
-
-    function requestUpgrade(address proxyAddress, bytes calldata data) external onlyRole(PLATFORM_ADMIN_ROLE) {
-        string memory tokenType = tokensType[proxyAddress];
-        address tokenImpl = getBurveImplement(tokenType);
-        require(tokenImpl != _proxyAdmin.getProxyImplementation(ITransparentUpgradeableProxy(payable(proxyAddress))), "Upgrade Failed: Same Implement");
-        upgradeTimelock[proxyAddress] = block.timestamp + 2 days;
-        upgradeList[proxyAddress] = abi.encode(tokenImpl, data);
-        emit LogTokenUpgradeRequested(proxyAddress, upgradeTimelock[proxyAddress], tokenImpl, msg.sender, data);
-    }
-
-    function rejectUpgrade(address proxyAddress, string calldata reason) external onlyProjectAdmin(proxyAddress) {
-        require(upgradeTimelock[proxyAddress] != 0, "project have no upgrade");
-        upgradeTimelock[proxyAddress] = 0;
-        upgradeList[proxyAddress] = new bytes(0);
-        emit LogTokenUpgradeRejected(proxyAddress, msg.sender, reason);
-    }
-
     /**
      * @notice when the upgrade requested, admin can upgrade the implement of token after 2 days
      * @param proxyAddress the proxy address of token
@@ -262,5 +226,11 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
 
     function getTokenHooks(address token) external view override returns (address[] memory) {
         return tokenHooks[token];
+    }
+
+    function claimAllFee() external onlyRole(PLATFORM_ADMIN_ROLE) {
+        for (uint256 i; i < tokensLength; i++) {
+            IBurveToken(tokens[i]).claimPlatformFee();
+        }
     }
 }

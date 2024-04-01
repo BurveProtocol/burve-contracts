@@ -20,18 +20,13 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     address internal _projectTreasury;
     address internal _projectAdmin;
     IBurveFactory internal _factory;
-    bool private _boolSlot = false; //temporary useless
+    uint256 private _platformFee;
     uint256 internal constant MAX_TAX_RATE_DENOMINATOR = 10000;
     uint256 internal constant MAX_PROJECT_TAX_RATE = 5000;
     uint256 internal _projectMintTax = 0;
     uint256 internal _projectBurnTax = 0;
     address internal _raisingToken;
     mapping(bytes4 => uint256) public lastModifyTimestamp;
-
-    modifier whenNotPaused() {
-        require(!paused(), "Pausable: paused");
-        _;
-    }
 
     modifier modifyDelay() {
         bytes4 selector = bytes4(msg.data[:4]);
@@ -76,20 +71,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function setMetadata(string memory url) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay {
         _setMetadata(url);
-    }
-
-    function paused() public view returns (bool) {
-        return _paused;
-    }
-
-    function pause() public onlyRole(FACTORY_ROLE) {
-        _paused = true;
-        emit Paused(_msgSender());
-    }
-
-    function unpause() public onlyRole(FACTORY_ROLE) {
-        _paused = false;
-        emit Unpaused(_msgSender());
     }
 
     function setProjectAdmin(address newProjectAdmin) public onlyRole(PROJECT_ADMIN_ROLE) {
@@ -159,7 +140,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return _factory.getTaxRateOfPlatform();
     }
 
-    function mint(address to, uint payAmount, uint minReceive) public payable virtual whenNotPaused nonReentrant {
+    function mint(address to, uint payAmount, uint minReceive) public payable virtual nonReentrant {
         require(to != address(0), "can not mint to address(0)");
 
         uint256 actualAmount = _transferFromInternal(msg.sender, payAmount);
@@ -173,7 +154,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         for (uint256 i = 0; i < hooks.length; i++) {
             IHook(hooks[i]).afterMintHook(address(0), to, tokenAmount);
         }
-        _transferInternal(_factory.getPlatformTreasury(), platformFee);
+        _platformFee += platformFee;
         _transferInternal(_projectTreasury, projectFee);
         emit LogMint(to, tokenAmount, payAmountActual, platformFee, projectFee);
     }
@@ -197,7 +178,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return (tokenAmountWant, paidAmount, platformFee, projectFee);
     }
 
-    function burn(address to, uint payAmount, uint minReceive) public payable virtual whenNotPaused nonReentrant {
+    function burn(address to, uint payAmount, uint minReceive) public payable virtual nonReentrant {
         require(to != address(0), "can not burn to address(0)");
         // require(msg.value == 0, "Burn: dont need to attach ether");
         address from = _msgSender();
@@ -211,7 +192,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         for (uint256 i = 0; i < hooks.length; i++) {
             IHook(hooks[i]).afterBurnHook(from, address(0), payAmount);
         }
-        _transferInternal(_factory.getPlatformTreasury(), platformFee);
+        _platformFee += platformFee;
         _transferInternal(_projectTreasury, projectFee);
         _transferInternal(to, amountReturn);
         emit LogBurned(from, payAmount, amountReturn, platformFee, projectFee);
@@ -260,6 +241,12 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function getHooks() public view returns (address[] memory) {
         return _factory.getTokenHooks(address(this));
+    }
+
+    function claimPlatformFee() public onlyRole(FACTORY_ROLE) {
+        uint256 amount = _platformFee;
+        _platformFee = 0;
+        _transferInternal(_factory.getPlatformTreasury(), amount);
     }
 
     event LogProjectTaxChanged();

@@ -162,14 +162,6 @@ interface IBurveToken is IAccessControlUpgradeable {
      * @return projectFee the estimated project fee
      */
     function estimateBurn(uint tokenAmount) external view returns (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee);
-
-    /**
-     *   @dev Pauses the Burve token contract
-     */
-    function pause() external;
-
-    /**
-     *   @dev Unpauses the Burve token contract
-     */
-    function unpause() external;
+    
+     function claimPlatformFee() external;
 }

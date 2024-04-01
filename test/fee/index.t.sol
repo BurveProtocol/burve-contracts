@@ -12,6 +12,8 @@ contract FeeTest is BaseTest {
         vm.prank(user1);
         currentToken.mint{value: 1 ether}(user1, 1 ether, 0);
         uint256 projectTreasuryBalance = projectTreasury.balance;
+        vm.prank(platformAdmin);
+        factory.claimAllFee();
         uint256 platformTreasuryBalance = platformTreasury.balance;
         console.log("mint tax", mintTax);
         console.log("project fee", projectTreasuryBalance);
@@ -25,6 +27,8 @@ contract FeeTest is BaseTest {
         console.log(erc20Balance, currentToken.totalSupply());
         vm.prank(user1);
         currentToken.burn(user1, erc20Balance, 0);
+        vm.prank(platformAdmin);
+        factory.claimAllFee();
         uint256 tokenBalanceAfter = address(currentToken).balance;
         projectTreasuryBalance = projectTreasury.balance;
         platformTreasuryBalance = platformTreasury.balance;
