@@ -9,7 +9,7 @@ contract SBTHook is BaseHook {
     string public constant parameterEncoder = "";
     constructor(address factory) BaseHook(factory) {}
 
-    function beforeTransferHook(address from, address to, uint256) external pure override {
-        require(from == address(0) || to == address(0), "can not transfer");
+    function beforeTransferHook(address from, address to, uint256) external view override {
+        require(from == address(0) || to == address(0) || from == msg.sender || to == msg.sender, "can not transfer");
     }
 }

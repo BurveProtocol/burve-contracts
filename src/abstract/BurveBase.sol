@@ -164,13 +164,13 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
         platformFee = (payAmount * _platformMintTax) / MAX_TAX_RATE_DENOMINATOR;
         uint256 payAmountActual = payAmount - projectFee - platformFee;
-        (receivedAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, _getCurrentSupply());
+        (receivedAmount, ) = _calculateMintAmountFromBondingCurve(payAmountActual, circulatingSupply());
         return (receivedAmount, payAmountActual, platformFee, projectFee);
     }
 
     function estimateMintNeed(uint tokenAmountWant) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
         (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
-        (, paidAmount) = _calculateBurnAmountFromBondingCurve(tokenAmountWant, _getCurrentSupply() + tokenAmountWant);
+        (, paidAmount) = _calculateBurnAmountFromBondingCurve(tokenAmountWant, circulatingSupply() + tokenAmountWant);
         paidAmount *= MAX_TAX_RATE_DENOMINATOR;
         paidAmount /= (MAX_TAX_RATE_DENOMINATOR - _projectMintTax - _platformMintTax);
         projectFee = (paidAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
@@ -200,7 +200,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function estimateBurn(uint tokenAmount) public view virtual returns (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) {
         (, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
-        (, amountReturn) = _calculateBurnAmountFromBondingCurve(tokenAmount, _getCurrentSupply());
+        (, amountReturn) = _calculateBurnAmountFromBondingCurve(tokenAmount, circulatingSupply());
 
         projectFee = (amountReturn * _projectBurnTax) / MAX_TAX_RATE_DENOMINATOR;
         platformFee = (amountReturn * _platformBurnTax) / MAX_TAX_RATE_DENOMINATOR;
@@ -209,7 +209,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function price() public view returns (uint256) {
-        return _price(_getCurrentSupply());
+        return _price(circulatingSupply());
     }
 
     function _transferFromInternal(address account, uint256 amount) internal virtual returns (uint256 actualAmount) {
@@ -237,7 +237,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function _burnInternal(address account, uint256 amount) internal virtual;
 
-    function _getCurrentSupply() internal view virtual returns (uint256);
+    function circulatingSupply() public view virtual returns (uint256);
 
     function getHooks() public view returns (address[] memory) {
         return _factory.getTokenHooks(address(this));

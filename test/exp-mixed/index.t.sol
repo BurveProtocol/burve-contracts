@@ -19,7 +19,7 @@ contract ExpMixedTest is BaseTest {
         uint256 b = ((A * 1 ether) / a) * 1e18;
         data = abi.encode(a, b);
         curve = ExpMixedBondingSwap(factory.getBondingCurveImplement(bondingCurveType));
-        deployNewERC20(0, 0, A, a);
+        deployNewERC20(1000, 1000, A, a);
     }
 
     function _one(uint256 currentSupply, uint256 nativeAsset, string calldata calltype) external view {
@@ -62,7 +62,7 @@ contract ExpMixedTest is BaseTest {
         bool tvlFlag = true;
         bool supplyFlag = true;
         for ((uint256 i, uint256 j, uint256 count) = (tvlLower, supplyLower, 0); (tvlFlag && i <= type(uint256).max / 10) || (supplyFlag && j <= type(uint256).max / 10); count = count + 1) {
-            if (count==200){
+            if (count == 200) {
                 break;
             }
             console.log("--------------count--------------", count);
@@ -193,7 +193,7 @@ contract ExpMixedTest is BaseTest {
                     uint256 user3Balance = user3.balance;
                     uint256 erc20Balance3 = currentToken.balanceOf(user3);
 
-                    uint256 contractTotalSupply = currentToken.totalSupply();
+                    uint256 contractTotalSupply = currentToken.circulatingSupply();
 
                     uint256 price = currentToken.price();
 
@@ -228,9 +228,13 @@ contract ExpMixedTest is BaseTest {
         console.log(amount);
         currentToken.mint{value: amount}(user1, amount, 0);
         uint256 balanceBefore = address(currentToken).balance;
-        console.log(currentToken.totalSupply());
-        currentToken.burn(user1, currentToken.totalSupply(), 0);
+        console.log(currentToken.circulatingSupply());
+        currentToken.burn(user1, currentToken.circulatingSupply(), 0);
         console.log(address(currentToken).balance, balanceBefore);
-        console.log(currentToken.totalSupply());
+        console.log(currentToken.circulatingSupply());
     }
+
+    fallback() external payable {}
+
+    receive() external payable {}
 }

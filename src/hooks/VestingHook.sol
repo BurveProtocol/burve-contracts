@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "./BaseHook.sol";
+import "../interfaces/IBurveToken.sol";
 
 contract VestingHook is BaseHook {
     
@@ -30,7 +31,7 @@ contract VestingHook is BaseHook {
         address token = msg.sender;
         uint256 softcap = softcapMap[token];
         if (softcap > 0) {
-            if (IERC20(token).totalSupply() >= softcap && vestingMap[token] == 0) {
+            if (IBurveToken(token).circulatingSupply() >= softcap && vestingMap[token] == 0) {
                 vestingMap[token] = block.timestamp + vestingDaysMap[token] * 1 days;
             }
         }
@@ -42,7 +43,7 @@ contract VestingHook is BaseHook {
         if (vestingEnd == 0) {
             return;
         }
-        bool flag = block.timestamp >= vestingEnd || IERC20(token).totalSupply() - amount >= softcapMap[token];
+        bool flag = block.timestamp >= vestingEnd || IBurveToken(token).circulatingSupply() - amount >= softcapMap[token];
         if (vestingEnd > 0 && block.timestamp >= vestingEnd) {
             //vesting end;
             delete softcapMap[token];

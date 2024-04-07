@@ -20,14 +20,32 @@ contract BurveRoute is IBurveRoute {
         _;
     }
 
-    function swap(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+    function mint(uint256 tokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external payable ensure(deadline) {
+        address tokenAddr = factory.getToken(tokenIndex);
+        require(tokenAddr != address(0), "invalid token");
+        IBurveToken token = IBurveToken(tokenAddr);
+        uint256 value = msg.value;
+        address raisingToken = token.getRaisingToken();
+        if (raisingToken != address(0)) {
+            IERC20(raisingToken).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(raisingToken).safeApprove(tokenAddr, amount);
+        } else {
+            require(amount <= value, "invalid value");
+        }
+        token.mint{value: raisingToken == address(0) ? amount : 0}(address(this), amount, minReturn);
+        uint256 afterMint = IERC20(tokenAddr).balanceOf(address(this));
+        require(afterMint >= minReturn, "can not reach minReturn");
+        IERC20(tokenAddr).safeTransfer(to, afterMint);
+    }
+
+    function swap(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external payable ensure(deadline) {
         address fromToken = factory.getToken(fromTokenIndex);
         address toToken = factory.getToken(toTokenIndex);
         require(fromToken != address(0) && toToken != address(0), "invalid token");
         swap(fromToken, toToken, amount, minReturn, to);
     }
 
-    function swapSupportFeeOnTransfer(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
+    function swapSupportFeeOnTransfer(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external payable ensure(deadline) {
         address fromToken = factory.getToken(fromTokenIndex);
         address toToken = factory.getToken(toTokenIndex);
         require(fromToken != address(0) && toToken != address(0), "invalid token");

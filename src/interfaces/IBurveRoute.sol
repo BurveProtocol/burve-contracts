@@ -18,7 +18,7 @@ interface IBurveRoute {
         uint256 minReturn,
         address to,
         uint256 deadline
-    ) external;
+    ) external payable;
 
     /**
      * swap `fromToken` to `toToken`, both token must be BurveToken
@@ -36,7 +36,7 @@ interface IBurveRoute {
         uint256 minReturn,
         address to,
         uint256 deadline
-    ) external;
+    ) external payable;
     /**
      * get the amount of `toToken` after swap
      * @param fromTokenAddr the address of `fromToken`
