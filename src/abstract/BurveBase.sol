@@ -26,10 +26,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     uint256 internal _projectMintTax = 0;
     uint256 internal _projectBurnTax = 0;
     address internal _raisingToken;
-    mapping(bytes4 => uint256) public lastModifyTimestamp;
+    mapping(bytes32 => uint256) public lastModifyTimestamp;
 
-    modifier modifyDelay() {
-        bytes4 selector = bytes4(msg.data[:4]);
+    modifier modifyDelay(string memory selectorStr) {
+        bytes32 selector = keccak256(abi.encode(selectorStr));
         require(lastModifyTimestamp[selector] + 2 days <= block.timestamp, "modify per 48 hours");
         lastModifyTimestamp[selector] = block.timestamp;
         _;
@@ -69,7 +69,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return _raisingToken;
     }
 
-    function setMetadata(string memory url) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay {
+    function setMetadata(string memory url) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("metadata") {
         _setMetadata(url);
     }
 
@@ -81,14 +81,16 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogProjectAdminChanged(newProjectAdmin);
     }
 
-    function multiSet(bytes[] calldata datas) external onlyRole(PROJECT_ADMIN_ROLE) {
-        for (uint256 i; i < datas.length; i++) {
-            (bool suc, ) = address(this).delegatecall(datas[i]);
-            require(suc, "set failed");
-        }
+    function setProjectTaxRateAndTreasury(address newProjectTreasury, uint256 projectMintTax, uint256 projectBurnTax) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("trade") {
+        _setProjectTreasury(newProjectTreasury);
+        _setProjectTaxRate(projectMintTax, projectBurnTax);
     }
 
-    function setProjectTreasury(address newProjectTreasury) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay {
+    function setProjectTreasury(address newProjectTreasury) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("trade") {
+        _setProjectTreasury(newProjectTreasury);
+    }
+
+    function _setProjectTreasury(address newProjectTreasury) private {
         require(newProjectTreasury != address(0), "Invalid Address");
         _projectTreasury = newProjectTreasury;
         emit LogProjectTreasuryChanged(newProjectTreasury);
@@ -128,7 +130,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogProjectTaxChanged();
     }
 
-    function setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay {
+    function setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("trade") {
         _setProjectTaxRate(projectMintTax, projectBurnTax);
     }
 
