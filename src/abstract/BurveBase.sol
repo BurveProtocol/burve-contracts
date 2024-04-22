@@ -180,7 +180,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return (tokenAmountWant, paidAmount, platformFee, projectFee);
     }
 
-    function burn(address to, uint payAmount, uint minReceive) public payable virtual nonReentrant {
+    function burn(address to, uint payAmount, uint minReceive) public virtual nonReentrant {
         require(to != address(0), "can not burn to address(0)");
         // require(msg.value == 0, "Burn: dont need to attach ether");
         address from = _msgSender();

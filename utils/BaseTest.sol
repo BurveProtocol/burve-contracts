@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/BurveTokenFactory.sol";
 import "../src/bondingCurve/ExpMixedBondingSwap.sol";
 import "../src/preset/BurveERC20Mixed.sol";
+import "../src/preset/BurveERC20WithSupply.sol";
 
 abstract contract BaseTest is Test {
     address deployer = address(0x11);
@@ -16,7 +17,7 @@ abstract contract BaseTest is Test {
     address user2 = address(0x42);
     address user3 = address(0x43);
     BurveTokenFactory factory;
-    BurveERC20Mixed currentToken;
+    BurveERC20WithSupply currentToken;
     string bondingCurveType;
 
     function setUp() public virtual {
@@ -30,7 +31,9 @@ abstract contract BaseTest is Test {
         ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
         factory.addBondingCurveImplement(address(exp));
         BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
+        BurveERC20WithSupply erc20WithSupplyImpl = new BurveERC20WithSupply();
         factory.updateBurveImplement("ERC20", address(erc20Impl));
+        factory.updateBurveImplement("ERC20WithSupply", address(erc20WithSupplyImpl));
         vm.label(address(admin), "Factory Proxy Admin");
         vm.label(address(factoryProxy), "Factory Proxy");
         // logAddr(address(route), "Burve Route");
@@ -58,8 +61,9 @@ abstract contract BaseTest is Test {
         uint256 b = ((A * 1e18) / a) * 1e18;
         console.log(a, b);
         bytes memory data = abi.encode(a, b);
+        bytes memory dataNew = abi.encode(type(uint224).max, data);
         IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
-            tokenType: "ERC20",
+            tokenType: "ERC20WithSupply",
             bondingCurveType: bondingCurveType,
             name: "Burve ERC20 Token",
             symbol: "BET",
@@ -69,9 +73,31 @@ abstract contract BaseTest is Test {
             projectMintTax: mintTax,
             projectBurnTax: burnTax,
             raisingTokenAddr: address(0),
-            data: data
+            data: dataNew
         });
-        currentToken = BurveERC20Mixed(factory.deployToken(info, 0));
+        currentToken = BurveERC20WithSupply(factory.deployToken(info, 0));
+        return currentToken;
+    }
+    function deployERC20WithSupply(uint256 mintTax, uint256 burnTax, uint256 A, uint256 initPrice,uint256 supply) public returns (BurveERC20Mixed) {
+        uint256 a = initPrice;
+        uint256 b = ((A * 1e18) / a) * 1e18;
+        console.log(a, b);
+        bytes memory data = abi.encode(a, b);
+        bytes memory dataNew = abi.encode(supply, data);
+        IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
+            tokenType: "ERC20WithSupply",
+            bondingCurveType: bondingCurveType,
+            name: "Burve ERC20 Token",
+            symbol: "BET",
+            metadata: "",
+            projectAdmin: projectAdmin,
+            projectTreasury: projectTreasury,
+            projectMintTax: mintTax,
+            projectBurnTax: burnTax,
+            raisingTokenAddr: address(0),
+            data: dataNew
+        });
+        currentToken = BurveERC20WithSupply(factory.deployToken(info, 0));
         return currentToken;
     }
 }

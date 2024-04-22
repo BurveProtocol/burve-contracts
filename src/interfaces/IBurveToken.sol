@@ -151,7 +151,7 @@ interface IBurveToken is IAccessControlUpgradeable {
      * @param payAmount the amount of tokens to burn
      * @param minReceive the minimum amount of raising token the seller wants to receive
      */
-    function burn(address to, uint payAmount, uint minReceive) external payable;
+    function burn(address to, uint payAmount, uint minReceive) external;
 
     /**
      * @dev Estimate the amount of raising token that will be received from burning tokens, the amount of tokens that need to be burned, and the platform and project fees
