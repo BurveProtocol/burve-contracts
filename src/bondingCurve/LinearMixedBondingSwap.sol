@@ -20,15 +20,20 @@ contract LinearMixedBondingSwap is IBondingCurve {
     }
 
     // x => erc20, y => native
-    // p(x) = x / k + p
+    // p(x) = (kx^2)/2+px-Δy
     function calculateMintAmountFromBondingCurve(uint256 raisingTokenAmount, uint256 tokenCurrentSupply, bytes memory parameters) public pure override returns (uint256 tokenAmount, uint256) {
         (uint256 k, uint256 p) = getParameter(parameters);
         bytes16 abdk_tokenCurrentSupply = ABDKMathQuad.fromUInt(tokenCurrentSupply);
         bytes16 abdk_raisingTokenAmount = ABDKMathQuad.fromUInt(raisingTokenAmount);
         bytes16 abdk_k = ABDKMathQuad.fromUInt(k);
         bytes16 abdk_p = ABDKMathQuad.fromUInt(p);
-        bytes16 tokenCurrentPrice = abdk_tokenCurrentSupply.mul(abdk_k).div(ABDKMathQuad.fromUInt(1e18)).add(abdk_p);
-        tokenAmount = tokenCurrentPrice.mul(tokenCurrentPrice).add(abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(2)).mul(abdk_k)).sqrt().sub(tokenCurrentPrice).mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_k).toUInt();
+        if (k == 0) {
+            tokenAmount = abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_p).toUInt();
+        } else {
+            bytes16 tokenCurrentPrice = abdk_tokenCurrentSupply.mul(abdk_k).div(ABDKMathQuad.fromUInt(1e18)).add(abdk_p);
+            tokenAmount = tokenCurrentPrice.mul(tokenCurrentPrice).add(abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(2)).mul(abdk_k)).sqrt().sub(tokenCurrentPrice).mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_k).toUInt();
+        }
+
         return (tokenAmount, raisingTokenAmount);
     }
 
