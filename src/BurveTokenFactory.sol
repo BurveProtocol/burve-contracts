@@ -11,6 +11,7 @@ import "./interfaces/IBurveFactory.sol";
 import "./interfaces/IBurveTokenPausable.sol";
 import "./interfaces/IBondingCurve.sol";
 import "./interfaces/IHook.sol";
+import "./interfaces/IVault.sol";
 
 contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
     using SafeERC20 for IERC20;
@@ -36,6 +37,7 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
     uint256 private _platformMintTax;
     uint256 private _platformBurnTax;
     address private _route;
+    address private _vault;
 
     modifier onlyProjectAdmin(address tokenAddr) {
         bytes32 projectAdminRole = IBurveToken(tokenAddr).getProjectAdminRole();
@@ -69,10 +71,10 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         tokensType[tokenAddr] = token.tokenType;
         if (mintfirstAmount > 0) {
             if (token.raisingTokenAddr != address(0)) {
-                IERC20(token.raisingTokenAddr).safeTransferFrom(msg.sender, address(this), mintfirstAmount);
-                IERC20(token.raisingTokenAddr).safeApprove(tokenAddr, mintfirstAmount);
+                IERC20(token.raisingTokenAddr).safeTransferFrom(msg.sender, _vault, mintfirstAmount);
             }
-            IBurveToken(tokenAddr).mint{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(msg.sender, mintfirstAmount, 0);
+            IVault(_vault).deposit{value: token.raisingTokenAddr == address(0) ? mintfirstAmount : 0}(token.raisingTokenAddr, tokenAddr);
+            IBurveToken(tokenAddr).mint(msg.sender, 0);
         }
         emit LogTokenDeployed(token.tokenType, token.bondingCurveType, tokenId, tokenAddr);
         return tokenAddr;
@@ -138,6 +140,10 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         return _route;
     }
 
+    function vault() public view returns (address) {
+        return _vault;
+    }
+
     function getPlatformAdmin() public view returns (address) {
         return _platformAdmin;
     }
@@ -150,6 +156,11 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         require(route != address(0), "Invalid Address");
         _route = route;
         emit LogRouteChanged(route);
+    }
+    function setVault(address newVault) public onlyRole(PLATFORM_ADMIN_ROLE) {
+        require(newVault != address(0), "Invalid Address");
+        _vault = newVault;
+        emit LogVaultChanged(newVault);
     }
 
     function setPlatformAdmin(address newPlatformAdmin) public onlyRole(PLATFORM_ADMIN_ROLE) {

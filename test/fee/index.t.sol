@@ -9,8 +9,9 @@ contract FeeTest is BaseTest {
         (uint256 mintTax, uint256 burnTax) = (200, 300);
         deployNewERC20(mintTax, burnTax, 1000, 0.001 ether);
         vm.deal(user1, 1000000 ether);
+        vault.deposit{value: 1 ether}(currentToken.getRaisingToken(), address(currentToken));
         vm.prank(user1);
-        currentToken.mint{value: 1 ether}(user1, 1 ether, 0);
+        currentToken.mint(user1, 0);
         uint256 projectTreasuryBalance = projectTreasury.balance;
         vm.prank(platformAdmin);
         factory.claimAllFee();
@@ -23,13 +24,13 @@ contract FeeTest is BaseTest {
         vm.deal(projectTreasury, 0);
         vm.deal(platformTreasury, 0);
         uint256 erc20Balance = currentToken.balanceOf(user1);
-        uint256 tokenBalanceBefore = address(currentToken).balance;
+        uint256 tokenBalanceBefore = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
         console.log(erc20Balance, currentToken.totalSupply());
         vm.prank(user1);
         currentToken.burn(user1, erc20Balance, 0);
         vm.prank(platformAdmin);
         factory.claimAllFee();
-        uint256 tokenBalanceAfter = address(currentToken).balance;
+        uint256 tokenBalanceAfter = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
         projectTreasuryBalance = projectTreasury.balance;
         platformTreasuryBalance = platformTreasury.balance;
 

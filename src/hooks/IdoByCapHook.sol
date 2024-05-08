@@ -41,7 +41,7 @@ contract IdoByCapHook is BaseHook {
         _checkEnd(idoInfo[address(msg.sender)]);
     }
 
-    function fund(IBurveToken token, uint256 amount) external virtual payable {
+    function fund(IBurveToken token, uint256 amount) external payable virtual {
         FundraisingInfo memory info = idoInfo[address(token)];
         address user = msg.sender;
         uint256 actualAmount = _transferFrom(info.raisingToken, user, amount);
@@ -66,10 +66,12 @@ contract IdoByCapHook is BaseHook {
         if (info.token != address(0) && !info.ended) {
             info.ended = true;
             uint256 value = info.raisingToken == address(0) ? info.totalFundraising : 0;
+            IVault vault = IVault(IBurveFactory(factory).vault());
             if (info.raisingToken != address(0)) {
-                IERC20(info.raisingToken).safeApprove(info.token, info.totalFundraising);
+                IERC20(info.raisingToken).transfer(address(vault), info.totalFundraising);
             }
-            IBurveToken(info.token).mint{value: value}(address(this), info.totalFundraising, 0);
+            vault.deposit{value: value}(info.raisingToken, info.token);
+            IBurveToken(info.token).mint(address(this), 0);
             info.totalMinted = IERC20(info.token).balanceOf(address(this));
         }
     }

@@ -131,6 +131,8 @@ interface IBurveFactory {
      */
     function getPlatformTreasury() external view returns (address);
 
+    function vault() external view returns (address);
+
     /**
      * Pause a token.
      * @param proxyAddress the address of the token's proxy.
@@ -171,18 +173,18 @@ interface IBurveFactory {
      *  @param flag true for whitelist, false for blacklist
      */
     function setHook(address hook, bool flag) external;
-    
+
     /** Deploy a new token with the specified `TokenInfo` and hooks
-    * @param token The information of the token to be deployed
-    * @param mintfirstAmount The first amount of the token to be minted.
-    * @param hooks the addresses of hooks
-    * @param datas the parameters of hooks
-    */
+     * @param token The information of the token to be deployed
+     * @param mintfirstAmount The first amount of the token to be minted.
+     * @param hooks the addresses of hooks
+     * @param datas the parameters of hooks
+     */
     function deployTokenWithHooks(TokenInfo calldata token, uint256 mintfirstAmount, address[] calldata hooks, bytes[] calldata datas) external payable returns (address);
 
     /**
      * Add a hook for existed token
-     * @param token the address of token 
+     * @param token the address of token
      * @param hook  the address of hook
      * @param data the parameters of hook
      */
@@ -190,7 +192,7 @@ interface IBurveFactory {
 
     /**
      * Add hooks for existed token
-     * @param token the address of token 
+     * @param token the address of token
      * @param hooks  the addresses of hooks
      * @param datas the parameters of hooks
      */
@@ -214,6 +216,7 @@ interface IBurveFactory {
 
     event LogPlatformTreasuryChanged(address newAccount);
     event LogRouteChanged(address newRoute);
+    event LogVaultChanged(address newVault);
 
     event LogPlatformTaxChanged();
     event LogHookWhiteListed(address hook);

@@ -25,7 +25,7 @@ contract IdoByTimeHook is BaseHook {
     mapping(address => mapping(address => uint256)) userFundraising;
     mapping(address => FundraisingInfo) idoInfo;
 
-    function registerHook(address token, bytes calldata data) external  virtual override onlyFactory {
+    function registerHook(address token, bytes calldata data) external virtual override onlyFactory {
         FundraisingInfo memory info = idoInfo[token];
         require(info.deadline == 0 || info.deadline > block.timestamp, "already launched");
         uint256 time = abi.decode(data, (uint256));
@@ -64,10 +64,12 @@ contract IdoByTimeHook is BaseHook {
         if (info.token != address(0) && !info.ended) {
             info.ended = true;
             uint256 value = info.raisingToken == address(0) ? info.totalFundraising : 0;
+            IVault vault = IVault(IBurveFactory(factory).vault());
             if (info.raisingToken != address(0)) {
-                IERC20(info.raisingToken).safeApprove(info.token, info.totalFundraising);
+                IERC20(info.raisingToken).transfer(address(vault), info.totalFundraising);
             }
-            IBurveToken(info.token).mint{value: value}(address(this), info.totalFundraising, 0);
+            vault.deposit{value: value}(info.raisingToken, info.token);
+            IBurveToken(info.token).mint(address(this), 0);
             info.totalMinted = IERC20(info.token).balanceOf(address(this));
         }
     }

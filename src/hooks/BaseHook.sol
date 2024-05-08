@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/IHook.sol";
+import "../interfaces/IBurveFactory.sol";
+import "../interfaces/IVault.sol";
 
 import "openzeppelin/token/ERC20/IERC20.sol";
 

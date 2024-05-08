@@ -35,7 +35,7 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
         _setupRole(PROJECT_ADMIN_ROLE, projectAdmin);
     }
 
-    function circulatingSupply() public virtual view override returns (uint256) {
+    function circulatingSupply() public view virtual override returns (uint256) {
         return totalSupply();
     }
 
