@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./BaseHook.sol";
 
+/// @title 
+/// @author 
+/// @notice SBT hook is not compatible with IDO hooks 
 contract SBTHook is BaseHook {
     string public constant hookName = "SBT";
     string public constant parameterEncoder = "";

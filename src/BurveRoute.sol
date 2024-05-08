@@ -32,10 +32,7 @@ contract BurveRoute is IBurveRoute {
         } else {
             require(amount <= value, "invalid value");
         }
-        token.mint{value: raisingToken == address(0) ? amount : 0}(address(this), amount, minReturn);
-        uint256 afterMint = IERC20(tokenAddr).balanceOf(address(this));
-        require(afterMint >= minReturn, "can not reach minReturn");
-        IERC20(tokenAddr).safeTransfer(to, afterMint);
+        token.mint{value: raisingToken == address(0) ? amount : 0}(to, amount, minReturn);
     }
 
     function swap(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external payable ensure(deadline) {

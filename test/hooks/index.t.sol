@@ -7,6 +7,9 @@ import "../../src/hooks/HardcapHook.sol";
 import "../../src/hooks/LaunchTimeHook.sol";
 import "../../src/hooks/SBTHook.sol";
 import "../../src/hooks/VestingHook.sol";
+import "../../src/hooks/IdoByCapHook.sol";
+import "../../src/hooks/IdoByTimeHook.sol";
+import "../../src/bondingCurve/LinearMixedBondingSwap.sol";
 
 contract HooksTest is BaseTest {
     function deployNewHook(address hook) public {
@@ -70,5 +73,48 @@ contract HooksTest is BaseTest {
         vm.prank(user1);
         vm.expectRevert("can not transfer");
         currentToken.transfer(user2, 1 ether);
+    }
+
+    function testIdoByTime() public {
+        deployNewERC20(100, 100, 1000, 0.001 ether);
+        IdoByTimeHook hook = new IdoByTimeHook(address(factory));
+        deployNewHook(address(hook));
+        uint256 timestamp = block.timestamp + 1 days;
+        bytes memory data = abi.encode(timestamp);
+        vm.prank(projectAdmin);
+        factory.addHookForToken(address(currentToken), address(hook), data);
+        vm.prank(user1);
+        hook.fund{value: 1 ether}(currentToken, 1 ether);
+        vm.prank(user2);
+        hook.fund{value: 2 ether}(currentToken, 2 ether);
+        vm.prank(user2);
+        hook.fund{value: 3 ether}(currentToken, 3 ether);
+        vm.warp(timestamp + 1);
+        vm.prank(user1);
+        hook.claim(address(currentToken));
+        console.log(IERC20(address(currentToken)).balanceOf(user1));
+        console.log(IBurveToken(address(currentToken)).circulatingSupply());
+    }
+
+    function testIdoByCap() public {
+        deployNewERC20(100, 100, 1000, 0.001 ether);
+        IdoByCapHook hook = new IdoByCapHook(address(factory));
+        deployNewHook(address(hook));
+        uint256 timestamp = block.timestamp + 1 days;
+        bytes memory data = abi.encode(5 ether,timestamp);
+        vm.prank(projectAdmin);
+        factory.addHookForToken(address(currentToken), address(hook), data);
+        vm.prank(user2);
+        hook.fund{value: 2 ether}(currentToken, 2 ether);
+        vm.prank(user3);
+        hook.fund{value: 3 ether}(currentToken, 3 ether);
+        vm.prank(user1);
+        vm.expectRevert();
+        hook.fund{value: 1 ether}(currentToken, 1 ether);
+        vm.warp(timestamp + 1);
+        vm.prank(user2);
+        hook.claim(address(currentToken));
+        console.log(IERC20(address(currentToken)).balanceOf(user2));
+        console.log(IBurveToken(address(currentToken)).circulatingSupply());
     }
 }
