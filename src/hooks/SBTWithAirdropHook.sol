@@ -10,6 +10,7 @@ import "../interfaces/IBurveToken.sol";
 /// @author
 /// @notice SBT hook is not compatible with IDO hooks
 contract SBTWithAirdropHook is BaseHook {
+    using SafeERC20 for IERC20;
     string public constant hookName = "SBTWithAirdropHook";
     string public constant parameterEncoder = "(uint256)";
     mapping(address => uint256) public airdropTime;
@@ -36,20 +37,26 @@ contract SBTWithAirdropHook is BaseHook {
         require((block.timestamp >= airdropTime[msg.sender] && rootMap[msg.sender] != bytes32(0)) || to == address(this), "can not mint yet");
     }
 
-    function finalAirdrop(address token, uint256 amountToMint, bytes32 root) external payable {
+    function finalAirdrop(address token, uint256 paidAmount, bytes32 root) external payable {
         bytes32 projectAdminRole = IBurveToken(token).getProjectAdminRole();
         require(IBurveToken(token).hasRole(projectAdminRole, msg.sender), "not project admin");
-        IVault vault = IVault(IBurveFactory(factory).vault());
         address raisingToken = IBurveToken(token).getRaisingToken();
-        (, uint paidAmount, , ) = IBurveToken(token).estimateMintNeed(amountToMint);
-        if (raisingToken != address(0)) {
-            IERC20(raisingToken).transferFrom(msg.sender, address(vault), paidAmount);
-        }
+        _transferFrom(token, msg.sender, paidAmount);
         uint256 value = raisingToken == address(0) ? paidAmount : 0;
-        vault.deposit{value: value}(raisingToken, token);
-        IBurveToken(token).mint(address(this), 0);
+        IBurveToken(token).mint{value: value}(address(this), paidAmount, 0);
         rootMap[token] = root;
-        emit NewAirdrop(root, token, paidAmount, amountToMint);
+        emit NewAirdrop(root, token, paidAmount, paidAmount);
+    }
+
+    function _transferFrom(address token, address from, uint256 amount) internal virtual returns (uint256 actualAmount) {
+        if (token == address(0)) {
+            require(amount == msg.value, "invalid value");
+            return amount;
+        } else {
+            uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+            IERC20(token).safeTransferFrom(from, address(this), amount);
+            actualAmount = IERC20(token).balanceOf(address(this)) - balanceBefore;
+        }
     }
 
     function claimAirdrop(address token, uint256 amount, uint256 seed, bytes32[] calldata _proof) external {

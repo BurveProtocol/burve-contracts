@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/BurveTokenFactory.sol";
-import "../src/BurveVault.sol";
 import "../src/bondingCurve/ExpMixedBondingSwap.sol";
 import "../src/preset/BurveERC20Mixed.sol";
 import "../src/preset/BurveERC20WithSupply.sol";
@@ -20,7 +19,6 @@ abstract contract BaseTest is Test {
     BurveTokenFactory factory;
     BurveERC20WithSupply currentToken;
     string bondingCurveType;
-    IVault vault;
 
     function setUp() public virtual {
         vm.startPrank(platformAdmin);
@@ -36,8 +34,6 @@ abstract contract BaseTest is Test {
         BurveERC20WithSupply erc20WithSupplyImpl = new BurveERC20WithSupply();
         factory.updateBurveImplement("ERC20", address(erc20Impl));
         factory.updateBurveImplement("ERC20WithSupply", address(erc20WithSupplyImpl));
-        vault = IVault(new BurveVault(address(0xffbbcc)));
-        factory.setVault(address(vault));
         vm.label(address(admin), "Factory Proxy Admin");
         vm.label(address(factoryProxy), "Factory Proxy");
         // logAddr(address(route), "Burve Route");
@@ -82,6 +78,7 @@ abstract contract BaseTest is Test {
         currentToken = BurveERC20WithSupply(factory.deployToken(info, 0));
         return currentToken;
     }
+
     function deployERC20WithSupply(uint256 mintTax, uint256 burnTax, uint256 A, uint256 initPrice, uint256 supply) public returns (BurveERC20Mixed) {
         uint256 a = initPrice;
         uint256 b = ((A * 1e18) / a) * 1e18;

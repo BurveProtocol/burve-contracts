@@ -131,8 +131,6 @@ interface IBurveFactory {
      */
     function getPlatformTreasury() external view returns (address);
 
-    function vault() external view returns (address);
-
     /**
      * Pause a token.
      * @param proxyAddress the address of the token's proxy.
@@ -216,7 +214,6 @@ interface IBurveFactory {
 
     event LogPlatformTreasuryChanged(address newAccount);
     event LogRouteChanged(address newRoute);
-    event LogVaultChanged(address newVault);
 
     event LogPlatformTaxChanged();
     event LogHookWhiteListed(address hook);

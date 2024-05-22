@@ -10,7 +10,6 @@ import "openzeppelin/security/ReentrancyGuard.sol";
 import "./SwapCurve.sol";
 import "./BurveMetadata.sol";
 import "../interfaces/IBurveFactory.sol";
-import "../interfaces/IVault.sol";
 import "../interfaces/IHook.sol";
 
 abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeable, ReentrancyGuard {
@@ -28,7 +27,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     uint256 internal _projectBurnTax = 0;
     address internal _raisingToken;
     mapping(bytes32 => uint256) public lastModifyTimestamp;
-    uint256 reserve;
 
     modifier modifyDelay(string memory selectorStr) {
         bytes32 selector = keccak256(abi.encode(selectorStr));
@@ -144,10 +142,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return _factory.getTaxRateOfPlatform();
     }
 
-    function mint(address to, uint minReceive) public virtual nonReentrant {
+    function mint(address to, uint payAmount, uint minReceive) public payable virtual nonReentrant {
         require(to != address(0), "can not mint to address(0)");
 
-        uint256 actualAmount = _getAmountIn();
+        uint256 actualAmount = _transferFromInternal(msg.sender, payAmount);
         (uint256 tokenAmount, uint256 payAmountActual, uint256 platformFee, uint256 projectFee) = estimateMint(actualAmount);
         require(tokenAmount >= minReceive, "Mint: mint amount less than minimal expect recieved");
         address[] memory hooks = getHooks();
@@ -159,8 +157,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
             IHook(hooks[i]).afterMintHook(address(0), to, tokenAmount);
         }
         _platformFee += platformFee;
-        reserve += actualAmount;
-        _transferInternal(_projectTreasury, projectFee, true);
+        _transferInternal(_projectTreasury, projectFee);
         emit LogMint(to, tokenAmount, payAmountActual, platformFee, projectFee);
     }
 
@@ -184,14 +181,6 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function burn(address to, uint payAmount, uint minReceive) public virtual nonReentrant {
-        _burn(to, payAmount, minReceive, true);
-    }
-
-    function burnWithoutWithdraw(address to, uint payAmount, uint minReceive) public virtual nonReentrant {
-        _burn(to, payAmount, minReceive, false);
-    }
-
-    function _burn(address to, uint payAmount, uint minReceive, bool withdraw) private {
         require(to != address(0), "can not burn to address(0)");
         // require(msg.value == 0, "Burn: dont need to attach ether");
         address from = _msgSender();
@@ -206,8 +195,8 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
             IHook(hooks[i]).afterBurnHook(from, address(0), payAmount);
         }
         _platformFee += platformFee;
-        _transferInternal(_projectTreasury, projectFee, true);
-        _transferInternal(to, amountReturn, withdraw);
+        _transferInternal(_projectTreasury, projectFee);
+        _transferInternal(to, amountReturn);
         emit LogBurned(from, payAmount, amountReturn, platformFee, projectFee);
     }
 
@@ -225,20 +214,25 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return _price(circulatingSupply());
     }
 
-    function _getAmountIn() internal virtual returns (uint256 actualAmount) {
-        IVault vault = IVault(_factory.vault());
-        uint256 balance = vault.balanceOf(_raisingToken, address(this));
-        return balance - reserve;
+    function _transferFromInternal(address account, uint256 amount) internal virtual returns (uint256 actualAmount) {
+        if (_raisingToken == address(0)) {
+            require(amount <= msg.value, "invalid value");
+            return amount;
+        } else {
+            uint256 balanceBefore = IERC20(_raisingToken).balanceOf(address(this));
+            IERC20(_raisingToken).safeTransferFrom(account, address(this), amount);
+            actualAmount = IERC20(_raisingToken).balanceOf(address(this)) - balanceBefore;
+        }
     }
 
-    function _transferInternal(address account, uint256 amount, bool withdraw) internal virtual {
-        IVault vault = IVault(_factory.vault());
-        if (withdraw) {
-            vault.withdraw(_raisingToken, account, amount);
+    function _transferInternal(address account, uint256 amount) internal virtual {
+        if (_raisingToken == address(0)) {
+            require(address(this).balance >= amount, "not enough balance");
+            (bool success, ) = account.call{value: amount}("");
+            require(success, "Transfer: failed");
         } else {
-            vault.transfer(_raisingToken, account, amount);
+            IERC20(_raisingToken).safeTransfer(account, amount);
         }
-        reserve -= amount;
     }
 
     function _mintInternal(address account, uint256 amount) internal virtual;
@@ -254,7 +248,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     function claimPlatformFee() public onlyRole(FACTORY_ROLE) {
         uint256 amount = _platformFee;
         _platformFee = 0;
-        _transferInternal(_factory.getPlatformTreasury(), amount, true);
+        _transferInternal(_factory.getPlatformTreasury(), amount);
     }
 
     event LogProjectTaxChanged();

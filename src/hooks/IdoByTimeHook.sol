@@ -64,12 +64,10 @@ contract IdoByTimeHook is BaseHook {
         if (info.token != address(0) && !info.ended) {
             info.ended = true;
             uint256 value = info.raisingToken == address(0) ? info.totalFundraising : 0;
-            IVault vault = IVault(IBurveFactory(factory).vault());
             if (info.raisingToken != address(0)) {
-                IERC20(info.raisingToken).transfer(address(vault), info.totalFundraising);
+                IERC20(info.raisingToken).safeApprove(info.token, info.totalFundraising);
             }
-            vault.deposit{value: value}(info.raisingToken, info.token);
-            IBurveToken(info.token).mint(address(this), 0);
+            IBurveToken(info.token).mint{value: value}(address(this), info.totalFundraising, 0);
             info.totalMinted = IERC20(info.token).balanceOf(address(this));
         }
     }

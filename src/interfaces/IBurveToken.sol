@@ -120,9 +120,10 @@ interface IBurveToken is IAccessControlUpgradeable {
     /**
      * @dev Mint new tokens
      * @param to the address where the new tokens will be sent to
+     * @param payAmount the amount of raising token to pay
      * @param minReceive the minimum amount of tokens the buyer wants to receive
      */
-    function mint(address to, uint minReceive) external;
+    function mint(address to, uint payAmount, uint minReceive) external payable;
 
     /**
      * @dev Estimate the amount of tokens that will be received from minting, the amount of raising token that will be paid, and the platform and project fees
@@ -151,8 +152,6 @@ interface IBurveToken is IAccessControlUpgradeable {
      * @param minReceive the minimum amount of raising token the seller wants to receive
      */
     function burn(address to, uint payAmount, uint minReceive) external;
-
-    function burnWithoutWithdraw(address to, uint payAmount, uint minReceive) external;
 
     /**
      * @dev Estimate the amount of raising token that will be received from burning tokens, the amount of tokens that need to be burned, and the platform and project fees

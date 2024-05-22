@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IBurveRoute.sol";
 import "./interfaces/IBurveToken.sol";
-import "./interfaces/IVault.sol";
 import "./interfaces/IBurveFactory.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
@@ -27,14 +26,13 @@ contract BurveRoute is IBurveRoute {
         IBurveToken token = IBurveToken(tokenAddr);
         uint256 value = msg.value;
         address raisingToken = token.getRaisingToken();
-        address vault = factory.vault();
         if (raisingToken != address(0)) {
-            IERC20(raisingToken).safeTransferFrom(msg.sender, vault, amount);
+            IERC20(raisingToken).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(raisingToken).safeApprove(tokenAddr, amount);
         } else {
             require(amount <= value, "invalid value");
         }
-        IVault(vault).deposit{value: raisingToken == address(0) ? amount : 0}(raisingToken, address(token));
-        token.mint(to, minReturn);
+        token.mint{value: raisingToken == address(0) ? amount : 0}(to, amount, minReturn);
     }
 
     function swap(uint256 fromTokenIndex, uint256 toTokenIndex, uint256 amount, uint256 minReturn, address to, uint256 deadline) external ensure(deadline) {
@@ -55,14 +53,15 @@ contract BurveRoute is IBurveRoute {
         // factory.token
         IBurveToken fromToken = IBurveToken(fromTokenAddr);
         IBurveToken toToken = IBurveToken(toTokenAddr);
-        address raisingToken = IBurveToken(fromTokenAddr).getRaisingToken();
-        require(raisingToken == IBurveToken(toTokenAddr).getRaisingToken(), "not the same raising token");
-        address vault = factory.vault();
         (uint tokenReceived, uint raisingTokenAmount) = getAmountOut(fromTokenAddr, toTokenAddr, amount);
         require(tokenReceived >= minReturn, "can not reach minReturn");
         IERC20(fromTokenAddr).safeTransferFrom(msg.sender, address(this), amount);
-        fromToken.burnWithoutWithdraw(toTokenAddr, amount, raisingTokenAmount);
-        toToken.mint(address(to), tokenReceived);
+        fromToken.burn(address(this), amount, raisingTokenAmount);
+        address raisingToken = fromToken.getRaisingToken();
+        if (raisingToken != address(0)) {
+            IERC20(raisingToken).safeApprove(toTokenAddr, raisingTokenAmount);
+        }
+        toToken.mint{value: raisingToken == address(0) ? raisingTokenAmount : 0}(address(to), raisingTokenAmount, tokenReceived);
     }
 
     function swapSupportFeeOnTransfer(address fromTokenAddr, address toTokenAddr, uint256 amount, uint256 minReturn, address to) private {
@@ -72,14 +71,14 @@ contract BurveRoute is IBurveRoute {
         require(raisingToken == IBurveToken(toTokenAddr).getRaisingToken(), "not the same raising token");
         (, uint256 raisingTokenAmount, , ) = IBurveToken(fromTokenAddr).estimateBurn(amount);
         IERC20(fromTokenAddr).safeTransferFrom(msg.sender, address(this), amount);
-        fromToken.burnWithoutWithdraw(toTokenAddr, amount, raisingTokenAmount);
+        fromToken.burn(address(this), amount, raisingTokenAmount);
         if (raisingToken != address(0)) {
             raisingTokenAmount = IERC20(raisingToken).balanceOf(address(this));
         }
         if (raisingToken != address(0)) {
             IERC20(raisingToken).safeApprove(toTokenAddr, raisingTokenAmount);
         }
-        toToken.mint(address(to), 0);
+        toToken.mint{value: raisingToken == address(0) ? raisingTokenAmount : 0}(address(this), raisingTokenAmount, 0);
         uint256 afterMint = IERC20(toTokenAddr).balanceOf(address(this));
         require(afterMint >= minReturn, "can not reach minReturn");
         IERC20(toTokenAddr).safeTransfer(to, afterMint);

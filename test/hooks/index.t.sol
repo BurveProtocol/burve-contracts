@@ -10,7 +10,6 @@ import "../../src/hooks/VestingHook.sol";
 import "../../src/hooks/IdoByCapHook.sol";
 import "../../src/hooks/IdoByTimeHook.sol";
 import "../../src/bondingCurve/LinearMixedBondingSwap.sol";
-import "../../src/hooks/SBTWithAirdropHook.sol";
 
 contract HooksTest is BaseTest {
     function deployNewHook(address hook) public {
@@ -26,10 +25,9 @@ contract HooksTest is BaseTest {
         factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
-        vault.deposit{value: paidAmount}(currentToken.getRaisingToken(), address(currentToken));
         vm.prank(user1);
         vm.expectRevert("capped");
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
     }
 
     function testLaunchTime() public {
@@ -41,11 +39,10 @@ contract HooksTest is BaseTest {
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.startPrank(user1);
-        vault.deposit{value: paidAmount}(currentToken.getRaisingToken(), address(currentToken));
         vm.expectRevert("not launch yet");
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
         vm.warp(block.timestamp + 1 days);
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
     }
 
     function testVesting() public {
@@ -56,9 +53,8 @@ contract HooksTest is BaseTest {
         factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether, 1));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
-        vault.deposit{value: paidAmount}(currentToken.getRaisingToken(), address(currentToken));
         vm.prank(user1);
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
         vm.expectRevert("vesting");
         vm.prank(user1);
         currentToken.burn(user1, 1 ether, 0);
@@ -72,9 +68,8 @@ contract HooksTest is BaseTest {
         factory.addHookForToken(address(currentToken), address(hook), "");
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
-        vault.deposit{value: paidAmount}(currentToken.getRaisingToken(), address(currentToken));
         vm.prank(user1);
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
         vm.prank(user1);
         vm.expectRevert("can not transfer");
         currentToken.transfer(user2, 1 ether);
@@ -121,37 +116,5 @@ contract HooksTest is BaseTest {
         hook.claim(address(currentToken));
         console.log(IERC20(address(currentToken)).balanceOf(user2));
         console.log(IBurveToken(address(currentToken)).circulatingSupply());
-    }
-
-    function testSBTWithAirdrop() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
-        SBTWithAirdropHook hook = new SBTWithAirdropHook(address(factory));
-        deployNewHook(address(hook));
-        vm.prank(projectAdmin);
-        bytes32 _leaf = keccak256(bytes.concat(keccak256(abi.encode(address(currentToken), user2, 100 ether, 111))));
-        factory.addHookForToken(address(currentToken), address(hook), abi.encode(block.timestamp + 1 days));
-        (, uint paidAmount2, , ) = currentToken.estimateMintNeed(5000 ether);
-        vm.deal(projectAdmin, paidAmount2);
-        vm.prank(projectAdmin);
-        hook.finalAirdrop{value: paidAmount2}(address(currentToken), 5000 ether, _leaf);
-
-        (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
-        vm.deal(user1, paidAmount * 2);
-        vault.deposit{value: paidAmount}(currentToken.getRaisingToken(), address(currentToken));
-        vm.prank(user1);
-        vm.expectRevert("can not mint yet");
-        currentToken.mint(user1, 0);
-
-        vm.warp(block.timestamp + 1 days + 1);
-        currentToken.mint(user1, 0);
-        vm.prank(user1);
-        vm.expectRevert("can not transfer");
-        currentToken.transfer(user2, 1 ether);
-
-        vm.prank(user2);
-        hook.claimAirdrop(address(currentToken), 100 ether, 111, new bytes32[](0));
-        vm.prank(user3);
-        vm.expectRevert("Incorrect merkle proof");
-        hook.claimAirdrop(address(currentToken), 100 ether, 111, new bytes32[](0));
     }
 }

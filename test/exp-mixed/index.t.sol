@@ -86,10 +86,9 @@ contract ExpMixedTest is BaseTest {
     function testEstimateMintBurn() public {
         vm.startPrank(user1);
         (uint receivedAmount, , , ) = currentToken.estimateMint(1000 ether);
-        vault.deposit{value: 1000 ether}(currentToken.getRaisingToken(), address(currentToken));
         vm.expectRevert();
-        currentToken.mint(user1, receivedAmount + 1);
-        currentToken.mint(user1, receivedAmount);
+        currentToken.mint{value: 1000 ether}(user1, 1000 ether, receivedAmount + 1);
+        currentToken.mint{value: 1000 ether}(user1, 1000 ether, receivedAmount);
 
         uint256 erc20Balance = currentToken.balanceOf(user1);
         (, uint amountReturn, , ) = currentToken.estimateBurn(erc20Balance);
@@ -102,11 +101,10 @@ contract ExpMixedTest is BaseTest {
     function testMultiMint() public {
         vm.startPrank(user1);
         for (uint256 i = 0; i < round; i++) {
-            vault.deposit{value: 1000 ether}(currentToken.getRaisingToken(), address(currentToken));
-            currentToken.mint(user1, 0);
+            currentToken.mint{value: 1000 ether}(user1, 1000 ether, 0);
             uint256 platformBalance = platformTreasury.balance;
             uint256 treasuryBalance = projectTreasury.balance;
-            uint256 tokenBalance = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
+            uint256 tokenBalance = address(currentToken).balance;
             uint256 userBalance = user1.balance;
             uint256 erc20Balance = currentToken.balanceOf(user1);
             (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(erc20Balance);
@@ -128,16 +126,14 @@ contract ExpMixedTest is BaseTest {
 
     function testMultiBurn() public {
         vm.startPrank(user1);
-        vault.deposit{value: 500000 ether}(currentToken.getRaisingToken(), address(currentToken));
-        currentToken.mint(user1, 0);
+        currentToken.mint{value: 500000 ether}(user1, 500000 ether, 0);
 
         uint256 totalErc20Balance = currentToken.balanceOf(user1);
         for (uint256 i = 0; i < round; i++) {
-            vault.deposit{value: 1000 ether}(currentToken.getRaisingToken(), address(currentToken));
-            currentToken.mint(user1, 0);
+            currentToken.mint{value: 1000 ether}(user1, 1000 ether, 0);
             uint256 platformBalance = platformTreasury.balance;
             uint256 treasuryBalance = projectTreasury.balance;
-            uint256 tokenBalance = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
+            uint256 tokenBalance = address(currentToken).balance;
             uint256 userBalance = user1.balance;
             uint256 erc20Balance = currentToken.balanceOf(user1);
             (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(erc20Balance);
@@ -165,26 +161,23 @@ contract ExpMixedTest is BaseTest {
             // user 3 mint and transfer to user 2
             uint256 randomSeed = uint256(keccak256(abi.encode(block.timestamp, i)));
             uint256 amount1 = ((randomSeed % 49) + 1) * 0.1 ether;
-            vault.deposit{value: amount1}(currentToken.getRaisingToken(), address(currentToken));
             vm.prank(user1);
-            currentToken.mint(user1, 0);
+            currentToken.mint{value: amount1}(user1, amount1, 0);
             // user 2 mint or burn random amount
             uint256 amount2 = ((randomSeed % 999) + 1) * 0.1 ether;
-            vault.deposit{value: amount2}(currentToken.getRaisingToken(), address(currentToken));
             vm.prank(user2);
-            currentToken.mint(user2, 0);
+            currentToken.mint{value: amount2}(user2, amount2, 0);
             uint256 user2Erc20 = currentToken.balanceOf(user2);
             vm.prank(user2);
             currentToken.burn(user2, ((user2Erc20 % 88) + 1) / 100, 0);
             // user 3 mint a alot and transfer user2 or user3
             // user 3 will burn randomly
             uint256 amount3 = ((randomSeed % 900) + 100) * 0.1 ether;
-            vault.deposit{value: amount3}(currentToken.getRaisingToken(), address(currentToken));
             vm.prank(user3);
             if (randomSeed % 2 == 1) {
-                currentToken.mint(user2, 0);
+                currentToken.mint{value: amount3}(user2, amount3, 0);
             } else {
-                currentToken.mint(user3, 0);
+                currentToken.mint{value: amount3}(user3, amount3, 0);
             }
             if (randomSeed % 10 < 2) {
                 uint256 user3Erc20 = currentToken.balanceOf(user3);
@@ -192,7 +185,7 @@ contract ExpMixedTest is BaseTest {
                     vm.prank(user3);
                     uint256 platformBalance = platformTreasury.balance;
                     uint256 treasuryBalance = projectTreasury.balance;
-                    uint256 tokenBalance = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
+                    uint256 tokenBalance = address(currentToken).balance;
                     uint256 user1Balance = user1.balance;
                     uint256 erc20Balance1 = currentToken.balanceOf(user1);
                     uint256 user2Balance = user2.balance;
@@ -233,12 +226,11 @@ contract ExpMixedTest is BaseTest {
         uint256 amount = type(uint32).max;
         amount = 97999999999999999991000000000000000107.3635064 ether;
         console.log(amount);
-        vault.deposit{value: amount}(currentToken.getRaisingToken(), address(currentToken));
-        currentToken.mint(user1, 0);
-        uint256 balanceBefore = vault.balanceOf(currentToken.getRaisingToken(), address(currentToken));
+        currentToken.mint{value: amount}(user1, amount, 0);
+        uint256 balanceBefore = address(currentToken).balance;
         console.log(currentToken.circulatingSupply());
         currentToken.burn(user1, currentToken.circulatingSupply(), 0);
-        console.log(vault.balanceOf(currentToken.getRaisingToken(), address(currentToken)), balanceBefore);
+        console.log(address(currentToken).balance, balanceBefore);
         console.log(currentToken.circulatingSupply());
     }
 
