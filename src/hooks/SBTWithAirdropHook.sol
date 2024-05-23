@@ -38,14 +38,14 @@ contract SBTWithAirdropHook is BaseHook {
     }
 
     function finalAirdrop(address token, uint256 paidAmount, bytes32 root) external payable {
+        require(rootMap[msg.sender] == bytes32(0), "already airdropped");
         bytes32 projectAdminRole = IBurveToken(token).getProjectAdminRole();
         require(IBurveToken(token).hasRole(projectAdminRole, msg.sender), "not project admin");
         address raisingToken = IBurveToken(token).getRaisingToken();
         _transferFrom(token, msg.sender, paidAmount);
-        uint256 value = raisingToken == address(0) ? paidAmount : 0;
-        IBurveToken(token).mint{value: value}(address(this), paidAmount, 0);
+        IBurveToken(token).mint{value: raisingToken == address(0) ? paidAmount : 0}(address(this), paidAmount, 0);
         rootMap[token] = root;
-        emit NewAirdrop(root, token, paidAmount, paidAmount);
+        emit NewAirdrop(root, token, paidAmount, IERC20(token).balanceOf(address(this)));
     }
 
     function _transferFrom(address token, address from, uint256 amount) internal virtual returns (uint256 actualAmount) {
