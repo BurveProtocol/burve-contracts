@@ -62,7 +62,7 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
 
     function deployToken(TokenInfo calldata token, uint256 mintfirstAmount) public payable returns (address) {
         address tokenAddr = getBurveImplement(token.tokenType).clone();
-        IBurveToken(tokenAddr).initialize(getBondingCurveImplement(token.bondingCurveType), token.name, token.symbol, token.metadata, token.projectAdmin, token.projectTreasury, token.projectMintTax, token.projectBurnTax, token.raisingTokenAddr, token.data, address(this));
+        IBurveToken(tokenAddr).initialize(getBondingCurveImplement(token.bondingCurveType), token, address(this));
         uint256 tokenId = tokensLength;
         tokens[tokensLength] = tokenAddr;
         tokensLength++;
@@ -200,7 +200,7 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
         upgradeTimelock[proxyAddress] = 0;
         upgradeList[proxyAddress] = new bytes(0);
         _proxyAdmin.upgradeAndCall{value: msg.value}(ITransparentUpgradeableProxy(payable(proxyAddress)), impl, data);
-        emit LogTokenImplementUpgraded(proxyAddress, tokensType[proxyAddress], _implementsMap[tokensType[proxyAddress]]);
+        emit LogTokenImplementUpgraded(proxyAddress, tokensType[proxyAddress], impl);
     }
 
     function setHook(address hook, bool flag) external override onlyRole(PLATFORM_ADMIN_ROLE) {

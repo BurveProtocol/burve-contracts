@@ -7,32 +7,10 @@ import "openzeppelin-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.so
 import "../abstract/BurveBase.sol";
 
 contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
-    function initialize(
-        address bondingCurveAddress,
-        string memory name,
-        string memory symbol,
-        string memory metadata,
-        address projectAdmin,
-        address projectTreasury,
-        uint256 projectMintTax,
-        uint256 projectBurnTax,
-        address raisingTokenAddr,
-        bytes memory parameters,
-        address factory
-    ) public virtual override initializer {
-        require(bytes(name).length > 0 && bytes(symbol).length > 0, "symbol or name can not be empty");
-        __ERC20_init(name, symbol);
-        _changeCoinMaker(bondingCurveAddress);
-        _initProject(projectAdmin, projectTreasury);
-        _initFactory(factory);
-        _setMetadata(metadata);
-        _bondingCurveParameters = parameters;
-        _raisingToken = raisingTokenAddr;
-        _initTaxRate(projectMintTax, projectBurnTax);
-
-        _setupRole(FACTORY_ROLE, factory);
-
-        _setupRole(PROJECT_ADMIN_ROLE, projectAdmin);
+    function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual override initializer {
+        require(bytes(token.name).length > 0 && bytes(token.symbol).length > 0, "symbol or name can not be empty");
+        super.initialize(bondingCurveAddress, token, factory);
+        __ERC20_init(token.name, token.symbol);
     }
 
     function circulatingSupply() public view virtual override returns (uint256) {

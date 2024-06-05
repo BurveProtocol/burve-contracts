@@ -136,7 +136,7 @@ contract ExpMixedTest is BaseTest {
             uint256 tokenBalance = address(currentToken).balance;
             uint256 userBalance = user1.balance;
             uint256 erc20Balance = currentToken.balanceOf(user1);
-            (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(erc20Balance);
+            (, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(erc20Balance);
             uint256 price = currentToken.price();
             console.log("----------round---------", i);
             console.log("platform treasury balance", platformBalance);
@@ -197,7 +197,7 @@ contract ExpMixedTest is BaseTest {
 
                     uint256 price = currentToken.price();
 
-                    console.log("----------round---------", i);
+                    console.log("----------round---------");
                     console.log("platform treasury balance", platformBalance);
                     console.log("project treasury balance", treasuryBalance);
 
@@ -210,9 +210,9 @@ contract ExpMixedTest is BaseTest {
                     console.log("user 3 balance", user3Balance);
                     console.log("user 3 token balance", erc20Balance3);
 
-                    (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(contractTotalSupply);
+                    (, uint amountReturn, uint platformFee, uint projectFee) = currentToken.estimateBurn(contractTotalSupply);
                     vm.prank(user3);
-                    currentToken.burn(user3, (user3Erc20 * ((randomSeed % 99) + 1)) / 100, 0);
+                    currentToken.burn(user3, (erc20Balance3 * ((uint256(keccak256(abi.encode(block.timestamp))) % 99) + 1)) / 100, 0);
                     uint256 totalAssetCanReturn = amountReturn + platformFee + projectFee;
                     console.log("the amount of raising token that after burn all", totalAssetCanReturn);
                     console.log("deviation (wei)", tokenBalance - totalAssetCanReturn);

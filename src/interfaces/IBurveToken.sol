@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "openzeppelin-upgradeable/access/IAccessControlUpgradeable.sol";
+import "./IBurveFactory.sol";
 
 /**
  * @dev Interface of the Burve swap
@@ -11,30 +12,10 @@ interface IBurveToken is IAccessControlUpgradeable {
     /**
      * @dev Initializes the Burve token contract.
      * @param bondingCurveAddress Address of the bonding curve contract.
-     * @param name Name of the token.
-     * @param symbol Symbol of the token.
-     * @param metadata Metadata URL for the token.
-     * @param projectAdmin Address of the project administrator.
-     * @param projectTreasury Address of the project treasury.
-     * @param projectMintTax Tax rate for project token minting.
-     * @param projectBurnTax Tax rate for project token burning.
-     * @param raisingTokenAddr Address of the raising token.
-     * @param parameters Parameters for the bonding curve contract.
+     * @param token the parameters of token.
      * @param factory Address of the factory contract.
      */
-    function initialize(
-        address bondingCurveAddress,
-        string memory name,
-        string memory symbol,
-        string memory metadata,
-        address projectAdmin,
-        address projectTreasury,
-        uint256 projectMintTax,
-        uint256 projectBurnTax,
-        address raisingTokenAddr,
-        bytes memory parameters,
-        address factory
-    ) external;
+    function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) external;
 
     /**
      * @dev Returns the role identifier for the project administrator.

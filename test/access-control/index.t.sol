@@ -67,7 +67,20 @@ contract AccessControlTest is BaseTest {
 
         bytes memory data = abi.encode(["uint256", "uint256"], [14 ether, 2e6 ether]);
         vm.expectRevert();
-        currentToken.initialize(address(newCurve), "Test Token", "TT", "metadata", projectTreasury, projectTreasury, 2000, 2000, address(0), data, address(factory));
+        IBurveFactory.TokenInfo memory token = IBurveFactory.TokenInfo({
+            tokenType: "",
+            bondingCurveType: "",
+            raisingTokenAddr: address(0),
+            symbol: "TT",
+            name: "Test Token",
+            metadata: "metadata",
+            projectTreasury: projectTreasury,
+            projectAdmin: projectAdmin,
+            projectMintTax: 2000,
+            projectBurnTax: 2000,
+            data: data
+        });
+        currentToken.initialize(address(newCurve), token, address(factory));
 
         BurveERC20Mixed newErc20 = new BurveERC20Mixed();
         vm.expectRevert();

@@ -31,7 +31,10 @@ contract LinearMixedBondingSwap is IBondingCurve {
             tokenAmount = abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_p).toUInt();
         } else {
             bytes16 tokenCurrentPrice = abdk_tokenCurrentSupply.mul(abdk_k).div(ABDKMathQuad.fromUInt(1e18)).add(abdk_p);
-            tokenAmount = tokenCurrentPrice.mul(tokenCurrentPrice).add(abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(2)).mul(abdk_k)).sqrt().sub(tokenCurrentPrice).mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_k).toUInt();
+            bytes16 _tokenAmount = tokenCurrentPrice.mul(tokenCurrentPrice);
+            _tokenAmount = _tokenAmount.add(abdk_raisingTokenAmount.mul(ABDKMathQuad.fromUInt(2)).mul(abdk_k)).sqrt();
+            _tokenAmount = _tokenAmount.sub(tokenCurrentPrice).mul(ABDKMathQuad.fromUInt(1e18)).div(abdk_k);
+            tokenAmount = _tokenAmount.toUInt();
         }
 
         return (tokenAmount, raisingTokenAmount);

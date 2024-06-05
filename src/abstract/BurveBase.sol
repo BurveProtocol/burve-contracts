@@ -35,19 +35,19 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _;
     }
 
-    function initialize(
-        address bondingCurveAddress,
-        string memory name,
-        string memory symbol,
-        string memory metadata,
-        address projectAdmin,
-        address projectTreasury,
-        uint256 projectMintTax,
-        uint256 projectBurnTax,
-        address raisingTokenAddr,
-        bytes memory parameters,
-        address factory
-    ) public virtual;
+    function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual {
+        _changeCoinMaker(bondingCurveAddress);
+        _initProject(token.projectAdmin, token.projectTreasury);
+        _initFactory(factory);
+        _setMetadata(token.metadata);
+        _bondingCurveParameters = token.data;
+        _raisingToken = token.raisingTokenAddr;
+        _initTaxRate(token.projectMintTax, token.projectBurnTax);
+
+        _setupRole(FACTORY_ROLE, factory);
+
+        _setupRole(PROJECT_ADMIN_ROLE, token.projectAdmin);
+    }
 
     function getProjectAdminRole() external pure returns (bytes32 role) {
         return PROJECT_ADMIN_ROLE;
@@ -111,7 +111,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     function _initTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
         require((MAX_PROJECT_TAX_RATE >= projectMintTax), "SetTax:Project Mint Tax Rate must between 0% to 50%");
         require((MAX_PROJECT_TAX_RATE >= projectBurnTax), "SetTax:Project Burn Tax Rate must between 0% to 50%");
-        (uint256 _platformMintTax, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
+        (uint256 _platformMintTax, uint256 _platformBurnTax) = getTaxRateOfPlatform();
         require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         _projectMintTax = projectMintTax;
@@ -122,7 +122,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     function _setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
         require((MAX_PROJECT_TAX_RATE >= projectMintTax && (_projectMintTax >= projectMintTax)), "SetTax:Project Mint Tax Rate must lower than before or between 0% to 50%");
         require((MAX_PROJECT_TAX_RATE >= projectBurnTax && (_projectBurnTax >= projectBurnTax)), "SetTax:Project Burn Tax Rate must lower than before or between 0% to 50%");
-        (uint256 _platformMintTax, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
+        (uint256 _platformMintTax, uint256 _platformBurnTax) = getTaxRateOfPlatform();
         require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         _projectMintTax = projectMintTax;
@@ -162,7 +162,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function estimateMint(uint payAmount) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
-        (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
+        (uint256 _platformMintTax, ) = getTaxRateOfPlatform();
         projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
         platformFee = (payAmount * _platformMintTax) / MAX_TAX_RATE_DENOMINATOR;
         uint256 payAmountActual = payAmount - projectFee - platformFee;
@@ -171,7 +171,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function estimateMintNeed(uint tokenAmountWant) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
-        (uint256 _platformMintTax, ) = _factory.getTaxRateOfPlatform();
+        (uint256 _platformMintTax, ) = getTaxRateOfPlatform();
         (, paidAmount) = _calculateBurnAmountFromBondingCurve(tokenAmountWant, circulatingSupply() + tokenAmountWant);
         paidAmount *= MAX_TAX_RATE_DENOMINATOR;
         paidAmount /= (MAX_TAX_RATE_DENOMINATOR - _projectMintTax - _platformMintTax);
@@ -201,7 +201,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function estimateBurn(uint tokenAmount) public view virtual returns (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) {
-        (, uint256 _platformBurnTax) = _factory.getTaxRateOfPlatform();
+        (, uint256 _platformBurnTax) = getTaxRateOfPlatform();
         (, amountReturn) = _calculateBurnAmountFromBondingCurve(tokenAmount, circulatingSupply());
 
         projectFee = (amountReturn * _projectBurnTax) / MAX_TAX_RATE_DENOMINATOR;
@@ -246,6 +246,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function claimPlatformFee() public onlyRole(FACTORY_ROLE) {
+        _claimPlatformFee();
+    }
+
+    function _claimPlatformFee() internal {
         uint256 amount = _platformFee;
         _platformFee = 0;
         _transferInternal(_factory.getPlatformTreasury(), amount);

@@ -6,6 +6,7 @@ import "../src/BurveTokenFactory.sol";
 import "../src/bondingCurve/ExpMixedBondingSwap.sol";
 import "../src/preset/BurveERC20Mixed.sol";
 import "../src/preset/BurveERC20WithSupply.sol";
+import "../src/preset/BurveLOL.sol";
 
 abstract contract BaseTest is Test {
     address deployer = address(0x11);
@@ -32,8 +33,10 @@ abstract contract BaseTest is Test {
         factory.addBondingCurveImplement(address(exp));
         BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
         BurveERC20WithSupply erc20WithSupplyImpl = new BurveERC20WithSupply();
+        BurveLOL lolImpl = new BurveLOL();
         factory.updateBurveImplement("ERC20", address(erc20Impl));
         factory.updateBurveImplement("ERC20WithSupply", address(erc20WithSupplyImpl));
+        factory.updateBurveImplement("LOL", address(lolImpl));
         vm.label(address(admin), "Factory Proxy Admin");
         vm.label(address(factoryProxy), "Factory Proxy");
         // logAddr(address(route), "Burve Route");
@@ -100,5 +103,22 @@ abstract contract BaseTest is Test {
         });
         currentToken = BurveERC20WithSupply(factory.deployToken(info, 0));
         return currentToken;
+    }
+
+    function deployLOL() public returns (BurveLOL) {
+        IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
+            tokenType: "LOL",
+            bondingCurveType: bondingCurveType,
+            name: "Burve ERC20 Token",
+            symbol: "BET",
+            metadata: "",
+            projectAdmin: projectAdmin,
+            projectTreasury: projectTreasury,
+            projectMintTax: 0,
+            projectBurnTax: 0,
+            raisingTokenAddr: address(0),
+            data: ""
+        });
+        return BurveLOL(factory.deployToken(info, 0));
     }
 }
