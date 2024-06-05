@@ -7,18 +7,18 @@ import "./BurveERC20WithSupply.sol";
 contract BurveLOL is BurveERC20WithSupply {
     using SafeERC20 for IERC20;
     uint256 constant _supply = 1e8 * 1 ether;
-    uint256 public constant _ratio = 90;
-    uint256 constant _supplyCap = (_supply * _ratio) / 100;
+    uint256 public constant ratio = 90;
+    uint256 constant _supplyCap = (_supply * ratio) / 100;
     uint256 constant _mintTax = 400;
     uint256 constant _burnTax = 400;
     uint256 constant _a = 0.0000198888 ether;
     uint256 constant _b = 31906964 ether;
-    uint256 constant _valueLimit = 100 ether;
+    uint256 public constant valueLimit = 100 ether;
     IUniswapV2Router constant _route = IUniswapV2Router(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
     bytes constant _data = abi.encode(_supply, abi.encode(_a, _b));
     // address _bondingCurveAddress = address(0);
     bool public idoEnded;
-    mapping(address => uint256) mintedValue;
+    mapping(address => uint256) public mintedValue;
 
     function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual override {
         token.projectAdmin = address(this);
@@ -32,7 +32,7 @@ contract BurveLOL is BurveERC20WithSupply {
     function _mintInternal(address account, uint256 amount) internal virtual override {
         (, uint256 paidAmount) = _calculateBurnAmountFromBondingCurve(amount, circulatingSupply() + amount);
         uint256 gap = 10 ** (18 - baseDecimals());
-        require((mintedValue[account] + paidAmount) * gap <= _valueLimit, "mint capped");
+        require((mintedValue[account] + paidAmount) * gap <= valueLimit, "mint capped");
         mintedValue[account] += paidAmount;
         require(!idoEnded && circulatingSupply() + amount <= _supplyCap + 1e18, "ido ended");
         super._mintInternal(account, amount);
