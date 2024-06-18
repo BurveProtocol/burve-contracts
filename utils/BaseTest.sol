@@ -6,7 +6,8 @@ import "../src/BurveTokenFactory.sol";
 import "../src/bondingCurve/ExpMixedBondingSwap.sol";
 import "../src/preset/BurveERC20Mixed.sol";
 import "../src/preset/BurveERC20WithSupply.sol";
-import "../src/preset/BurveLOL.sol";
+import "../src/preset/BurveLOLBase.sol";
+import "../src/preset/BurveLOLBsc.sol";
 
 abstract contract BaseTest is Test {
     address deployer = address(0x11);
@@ -33,7 +34,12 @@ abstract contract BaseTest is Test {
         factory.addBondingCurveImplement(address(exp));
         BurveERC20Mixed erc20Impl = new BurveERC20Mixed();
         BurveERC20WithSupply erc20WithSupplyImpl = new BurveERC20WithSupply();
-        BurveLOL lolImpl = new BurveLOL();
+        address lolImpl;
+        if (block.chainid == 8453) {
+            lolImpl = address(new BurveLOLBase());
+        } else if (block.chainid == 56) {
+            lolImpl = address(new BurveLOLBsc());
+        }
         factory.updateBurveImplement("ERC20", address(erc20Impl));
         factory.updateBurveImplement("ERC20WithSupply", address(erc20WithSupplyImpl));
         factory.updateBurveImplement("LOL", address(lolImpl));

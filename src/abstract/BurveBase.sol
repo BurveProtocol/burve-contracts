@@ -3,7 +3,6 @@ pragma solidity >=0.8.13;
 
 // openzeppelin
 import "openzeppelin-upgradeable/access/AccessControlUpgradeable.sol";
-import "openzeppelin/token/ERC20/IERC20.sol";
 import "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin/security/ReentrancyGuard.sol";
 
@@ -11,6 +10,7 @@ import "./SwapCurve.sol";
 import "./BurveMetadata.sol";
 import "../interfaces/IBurveFactory.sol";
 import "../interfaces/IHook.sol";
+import "../interfaces/IERC20WithDecimals.sol";
 
 abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,6 +27,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     uint256 internal _projectBurnTax = 0;
     address internal _raisingToken;
     mapping(bytes32 => uint256) public lastModifyTimestamp;
+    uint8 _baseDecimals;
 
     modifier modifyDelay(string memory selectorStr) {
         bytes32 selector = keccak256(abi.encode(selectorStr));
@@ -42,8 +43,12 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _setMetadata(token.metadata);
         _bondingCurveParameters = token.data;
         _raisingToken = token.raisingTokenAddr;
-        _initTaxRate(token.projectMintTax, token.projectBurnTax);
-
+        _setProjectTaxRate(token.projectMintTax, token.projectBurnTax);
+        if (_raisingToken == address(0)) {
+            _baseDecimals = 18;
+        } else {
+            _baseDecimals = IERC20WithDecimals(_raisingToken).decimals();
+        }
         _setupRole(FACTORY_ROLE, factory);
 
         _setupRole(PROJECT_ADMIN_ROLE, token.projectAdmin);
@@ -104,24 +109,13 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     }
 
     function _initFactory(address account) internal {
-        require(account != address(0), "Invalid Treasury Address");
+        require(account != address(0), "Invalid Factory Address");
         _factory = IBurveFactory(account);
     }
 
-    function _initTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
-        require((MAX_PROJECT_TAX_RATE >= projectMintTax), "SetTax:Project Mint Tax Rate must between 0% to 50%");
-        require((MAX_PROJECT_TAX_RATE >= projectBurnTax), "SetTax:Project Burn Tax Rate must between 0% to 50%");
-        (uint256 _platformMintTax, uint256 _platformBurnTax) = getTaxRateOfPlatform();
-        require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
-        require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
-        _projectMintTax = projectMintTax;
-        _projectBurnTax = projectBurnTax;
-        emit LogProjectTaxChanged();
-    }
-
     function _setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) internal {
-        require((MAX_PROJECT_TAX_RATE >= projectMintTax && (_projectMintTax >= projectMintTax)), "SetTax:Project Mint Tax Rate must lower than before or between 0% to 50%");
-        require((MAX_PROJECT_TAX_RATE >= projectBurnTax && (_projectBurnTax >= projectBurnTax)), "SetTax:Project Burn Tax Rate must lower than before or between 0% to 50%");
+        require((MAX_PROJECT_TAX_RATE >= projectMintTax && (_projectMintTax >= projectMintTax || _isInitializing())), "SetTax:Project Mint Tax Rate must lower than before or between 0% to 50%");
+        require((MAX_PROJECT_TAX_RATE >= projectBurnTax && (_projectBurnTax >= projectBurnTax || _isInitializing())), "SetTax:Project Burn Tax Rate must lower than before or between 0% to 50%");
         (uint256 _platformMintTax, uint256 _platformBurnTax) = getTaxRateOfPlatform();
         require(projectMintTax + _platformMintTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
         require(projectBurnTax + _platformBurnTax <= MAX_TAX_RATE_DENOMINATOR, "SetTax: Invalid number");
@@ -255,6 +249,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _transferInternal(_factory.getPlatformTreasury(), amount);
     }
 
+    function baseDecimals() internal view override returns (uint8) {
+        return _baseDecimals;
+    }
+
     event LogProjectTaxChanged();
     event LogDestroyed(address account);
     event LogProjectAdminChanged(address newAccount);
@@ -265,6 +263,4 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
     event LogMint(address to, uint256 tokenAmount, uint256 lockAmount, uint256 platformFee, uint256 projectFee);
 
     event LogBurned(address from, uint256 tokenAmount, uint256 returnAmount, uint256 platformFee, uint256 projectFee);
-
-    fallback() external {}
 }

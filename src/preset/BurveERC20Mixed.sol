@@ -40,11 +40,4 @@ contract BurveERC20Mixed is BurveBase, ERC20VotesUpgradeable {
             IHook(hooks[i]).afterTransferHook(from, to, amount);
         }
     }
-
-    function baseDecimals() internal view override returns (uint8) {
-        if (_raisingToken == address(0)) {
-            return 18;
-        }
-        return ERC20VotesUpgradeable(_raisingToken).decimals();
-    }
 }

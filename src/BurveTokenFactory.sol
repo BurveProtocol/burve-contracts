@@ -254,7 +254,7 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
 
     function claimAllFee() external onlyRole(PLATFORM_ADMIN_ROLE) {
         for (uint256 i; i < tokensLength; i++) {
-            IBurveToken(tokens[i]).claimPlatformFee();
+            try IBurveToken(tokens[i]).claimPlatformFee() {} catch {}
         }
     }
 }
