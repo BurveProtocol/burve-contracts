@@ -23,7 +23,9 @@ abstract contract BurveLOL is BurveERC20WithSupply {
 
     function _referral() internal virtual returns (address);
 
-    function _addLiquidity(address raisingToken, uint256 value) internal virtual returns (address);
+    function _createPair(address raisingToken) internal virtual returns (address);
+
+    function _addLiquidity(address raisingToken, uint256 value) internal virtual;
 
     function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual override {
         token.projectAdmin = address(this);
@@ -31,7 +33,13 @@ abstract contract BurveLOL is BurveERC20WithSupply {
         token.projectMintTax = _mintTax;
         token.projectBurnTax = _burnTax;
         token.data = _data;
+        pair = _createPair(token.raisingTokenAddr);
         super.initialize(bondingCurveAddress, token, factory);
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        require(pair != to || idoEnded, "can not add liquidity before ido");
+        super._beforeTokenTransfer(from, to, amount);
     }
 
     function _mintInternal(address account, uint256 amount) internal virtual override {
@@ -52,7 +60,7 @@ abstract contract BurveLOL is BurveERC20WithSupply {
             _transferInternal(_mm(), out / 2);
             _transferInternal(_referral(), out / 2);
             uint256 left = raisedAmount - out;
-            pair = _addLiquidity(raisingToken, left);
+            _addLiquidity(raisingToken, left);
             emit IdoEnded();
         }
     }

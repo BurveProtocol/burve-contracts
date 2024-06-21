@@ -19,7 +19,11 @@ contract BurveLOLBsc is BurveLOL {
         return 0xa61C3e03982714bb54d03A2E991e4f1249FeE53a;
     }
 
-    function _addLiquidity(address raisingToken, uint256 value) internal override returns (address addr) {
+    function _createPair(address raisingToken) internal virtual override returns (address addr) {
+        addr = IUniswapFactory(IUniswapRouter(_route()).factory()).getPair(raisingToken == address(0) ? 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c : raisingToken, address(this));
+    }
+
+    function _addLiquidity(address raisingToken, uint256 value) internal override {
         uint256 balance = balanceOf(address(this));
         address route = _route();
         _approve(address(this), address(route), balance);
@@ -29,7 +33,6 @@ contract BurveLOLBsc is BurveLOL {
             IERC20(raisingToken).safeApprove(address(route), value);
             IUniswapRouter(route).addLiquidity(address(this), raisingToken, balance, value, 0, 0, address(0xdead), block.timestamp + 1);
         }
-        addr = IUniswapFactory(IUniswapRouter(route).factory()).getPair(raisingToken == address(0) ? 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c : raisingToken, address(this));
     }
 }
 
@@ -43,4 +46,6 @@ interface IUniswapRouter {
     function addLiquidityETH(address token, uint256 amountTokenDesired, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) external payable;
 
     function factory() external returns (address);
+
+    function createPair(address tokenA, address tokenB) external returns (address pair);
 }

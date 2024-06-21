@@ -19,7 +19,11 @@ contract BurveLOLBase is BurveLOL {
         return 0x8Ffff9caF2DAe12d4dbe5ad13a48A4581Bbc3D55;
     }
 
-    function _addLiquidity(address raisingToken, uint256 value) internal override returns (address addr) {
+    function _createPair(address raisingToken) internal virtual override returns (address addr) {
+        addr = IAerodromeFactory(IAerodromeRouter(_route()).defaultFactory()).createPool(raisingToken == address(0) ? 0x4200000000000000000000000000000000000006 : raisingToken, address(this), false);
+    }
+
+    function _addLiquidity(address raisingToken, uint256 value) internal override {
         uint256 balance = balanceOf(address(this));
         address route = _route();
         _approve(address(this), address(route), balance);
@@ -29,12 +33,13 @@ contract BurveLOLBase is BurveLOL {
             IERC20(raisingToken).safeApprove(address(route), value);
             IAerodromeRouter(route).addLiquidity(address(this), raisingToken, false, balance, value, 0, 0, address(0xdead), block.timestamp + 1);
         }
-        addr = IAerodromeFactory(IAerodromeRouter(route).defaultFactory()).getPool(raisingToken == address(0) ? 0x4200000000000000000000000000000000000006 : raisingToken, address(this), false);
     }
 }
 
 interface IAerodromeFactory {
     function getPool(address tokenA, address tokenB, bool stable) external view returns (address pair);
+
+    function createPool(address tokenA, address tokenB, bool stable) external returns (address pool);
 }
 
 interface IAerodromeRouter {

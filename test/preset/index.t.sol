@@ -15,10 +15,15 @@ contract PresetTest is BaseTest {
     function testLOL() public {
         BurveLOL lol = deployLOL();
         (, uint paidAmount, , ) = lol.estimateMintNeed((1e8 * 1 ether * 90) / 100);
+        lol.mint{value: 100 ether}(address(this), 100 ether, 0);
+        address pair = lol.pair();
+        vm.expectRevert();
+        lol.transfer(pair, 1);
         vm.deal(user1, paidAmount * 2);
         vm.prank(user1);
-        lol.mint{value: paidAmount}(address(user1), paidAmount, 0);
+        lol.mint{value: paidAmount - 100 ether}(address(user1), paidAmount - 100 ether, 0);
         console.log(lol.circulatingSupply());
         require(lol.idoEnded(), "ido not end");
+        lol.transfer(lol.pair(), 1);
     }
 }

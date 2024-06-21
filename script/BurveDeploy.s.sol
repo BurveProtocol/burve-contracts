@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "utils/BaseScript.sol";
 import "../src/BurveTokenFactory.sol";
-import "../src/CloneFactory.sol";
 import "../src/BurveRoute.sol";
 import "../src/BurveRewarder.sol";
 import "../src/bondingCurve/ExpMixedBondingSwap.sol";
@@ -268,57 +267,6 @@ contract BurveDeployScript is BaseScript {
         addr = address(rewarder);
         console.log("rewarder", addr);
         vm.stopBroadcast();
-    }
-
-    function deployCloneFactory() public {
-        deployerKey = vm.parseUint("0xfe723240eab090306b843955f4677330b43a72dc7f5a47595dec0f2bd1a23ed9");
-        address deployer = vm.addr(deployerKey);
-        vm.startBroadcast(deployerKey);
-        CloneFactory f = new CloneFactory();
-        BurveLOLBase erc20Impl = new BurveLOLBase();
-        BurveLOL lol = BurveLOL(f.clone(address(erc20Impl)));
-        IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
-            tokenType: "",
-            bondingCurveType: "",
-            name: "Test LOL",
-            symbol: "TLOL",
-            metadata: "",
-            projectAdmin: address(0),
-            projectTreasury: address(0),
-            projectMintTax: 0,
-            projectBurnTax: 0,
-            raisingTokenAddr: address(0),
-            data: ""
-        });
-        lol.initialize(0x25814d4f654249Bb78Baf058488633C44961BACC, info, address(f));
-        lol.mint{value: 0.01 ether}(0x5F594454c0a6f582b777B23F4436fe26171B1612, 0.01 ether, 0);
-        // f.claim(address(lol));
-        console.log(address(f), address(lol).balance);
-    }
-
-    function redeployTestLOL() public {
-        deployerKey = vm.parseUint("0xfe723240eab090306b843955f4677330b43a72dc7f5a47595dec0f2bd1a23ed9");
-        vm.startBroadcast(deployerKey);
-        CloneFactory f = CloneFactory(0xD36A25722C234936D9DCB238CbbDc543dAeBE92f);
-        IBurveFactory.TokenInfo memory info = IBurveFactory.TokenInfo({
-            tokenType: "",
-            bondingCurveType: "",
-            name: "Test LOL",
-            symbol: "TLOL",
-            metadata: "",
-            projectAdmin: address(0),
-            projectTreasury: address(0),
-            projectMintTax: 0,
-            projectBurnTax: 0,
-            raisingTokenAddr: address(0x55d398326f99059fF775485246999027B3197955),
-            data: ""
-        });
-        // BurveLOL erc20Impl = new BurveLOL();
-        BurveLOL erc20Impl = BurveLOL(0x74a417E258469557b5b24259860B7920F4cF5fa7);
-        BurveLOL lol = BurveLOL(f.clone(address(erc20Impl)));
-        IERC20(0x55d398326f99059fF775485246999027B3197955).approve(address(lol), 1 ether);
-        lol.initialize(0x25814d4f654249Bb78Baf058488633C44961BACC, info, address(f));
-        lol.mint{value: info.raisingTokenAddr == address(0) ? 0.01 ether : 0}(0x5F594454c0a6f582b777B23F4436fe26171B1612, 0.01 ether, 0);
     }
 
     function deploy12() public {
