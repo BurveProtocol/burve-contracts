@@ -131,38 +131,6 @@ interface IBurveFactory {
      */
     function getPlatformTreasury() external view returns (address);
 
-    /**
-     * Pause a token.
-     * @param proxyAddress the address of the token's proxy.
-     */
-    function pause(address proxyAddress) external;
-
-    /**
-     * Unpause a token.
-     * @param proxyAddress the address of the token's proxy.
-     */
-    function unpause(address proxyAddress) external;
-
-    /**
-     * Request an upgrade for a token's implementation.
-     * @param proxyAddress the address of the token's proxy.
-     * @param data additional data for the upgrade request.
-     */
-    function requestUpgrade(address proxyAddress, bytes calldata data) external;
-
-    /**
-     * Reject an upgrade request for a token.
-     * @param proxyAddress the address of the token's proxy.
-     * @param reason the reason for rejection.
-     */
-    function rejectUpgrade(address proxyAddress, string calldata reason) external;
-
-    /**
-     * Upgrade a token's implementation.
-     * @param proxyAddress the address of the token's proxy.
-     */
-    function upgradeTokenImplement(address proxyAddress) external payable;
-
     function getTokenHooks(address token) external view returns (address[] memory hooks);
 
     /**
@@ -179,26 +147,6 @@ interface IBurveFactory {
      * @param datas the parameters of hooks
      */
     function deployTokenWithHooks(TokenInfo calldata token, uint256 mintfirstAmount, address[] calldata hooks, bytes[] calldata datas) external payable returns (address);
-
-    /**
-     * Add a hook for existed token
-     * @param token the address of token
-     * @param hook  the address of hook
-     * @param data the parameters of hook
-     */
-    function addHookForToken(address token, address hook, bytes calldata data) external;
-
-    /**
-     * Add hooks for existed token
-     * @param token the address of token
-     * @param hooks  the addresses of hooks
-     * @param datas the parameters of hooks
-     */
-    function addHooksForToken(address token, address[] calldata hooks, bytes[] calldata datas) external;
-
-    function removeHookForToken(address token, address hook) external;
-
-    function removeAllHookForToken(address token) external;
 
     event LogTokenDeployed(string tokenType, string bondingCurveType, uint256 tokenId, address deployedAddr);
 

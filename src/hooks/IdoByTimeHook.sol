@@ -56,7 +56,7 @@ contract IdoByTimeHook is BaseHook {
         uint256 fundraising = userFundraising[token][user];
         userFundraising[token][user] = 0;
         uint256 amountToTransfer = (info.totalMinted * fundraising) / info.totalFundraising;
-        _transfer(info.token, user, amountToTransfer);
+        IERC20(info.token).safeTransfer(user, amountToTransfer);
     }
 
     function _checkEnd(FundraisingInfo storage info) private {
@@ -69,16 +69,6 @@ contract IdoByTimeHook is BaseHook {
             }
             IBurveToken(info.token).mint{value: value}(address(this), info.totalFundraising, 0);
             info.totalMinted = IERC20(info.token).balanceOf(address(this));
-        }
-    }
-
-    function _transfer(address token, address to, uint256 amount) internal virtual {
-        if (token == address(0)) {
-            require(address(this).balance >= amount, "not enough balance");
-            (bool success, ) = to.call{value: amount, gas: 40000}("");
-            require(success, "Transfer: failed");
-        } else {
-            IERC20(token).safeTransfer(to, amount);
         }
     }
 

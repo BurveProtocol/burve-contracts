@@ -21,7 +21,7 @@ interface IBurveToken is IAccessControlUpgradeable {
      * @dev Returns the role identifier for the project administrator.
      * @return role identifier for the project administrator.
      */
-    function getProjectAdminRole() external pure returns (bytes32 role);
+    function PROJECT_ADMIN_ROLE() external pure returns (bytes32 role);
 
     /**
      * @dev Sets the metadata URL for the token.

@@ -21,8 +21,6 @@ abstract contract BaseHook is IHook {
 
     function registerHook(address token, bytes calldata data) external virtual override onlyFactory {}
 
-    function unregisterHook(address token) external virtual override onlyFactory {}
-
     function beforeTransferHook(address from, address to, uint256 amount) external virtual override {}
 
     function afterTransferHook(address from, address to, uint256 amount) external virtual override {}

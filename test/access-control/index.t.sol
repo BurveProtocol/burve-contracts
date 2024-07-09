@@ -57,7 +57,7 @@ contract AccessControlTest is BaseTest {
     function testFactoryRole() public {
         vm.prank(platformAdmin);
         vm.expectRevert();
-        factory.initialize(platformAdmin, platformAdmin, address(0));
+        factory.initialize(platformAdmin, platformAdmin);
 
         ExpMixedBondingSwap newCurve = new ExpMixedBondingSwap();
         vm.expectRevert();

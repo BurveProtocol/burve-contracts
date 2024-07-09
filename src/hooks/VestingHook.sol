@@ -4,9 +4,9 @@ import "./BaseHook.sol";
 import "../interfaces/IBurveToken.sol";
 
 contract VestingHook is BaseHook {
-    
     string public constant hookName = "Vesting";
     string public constant parameterEncoder = "(uint256,uint256)";
+
     constructor(address factory) BaseHook(factory) {}
 
     mapping(address => uint256) public vestingDaysMap;
@@ -18,13 +18,6 @@ contract VestingHook is BaseHook {
         (uint256 softcap, uint256 vestingDays) = abi.decode(data, (uint256, uint256));
         vestingDaysMap[token] = vestingDays;
         softcapMap[token] = softcap;
-    }
-
-    function unregisterHook(address token) external virtual override onlyFactory {
-        require(vestingMap[token] == 0, "already vesting");
-        delete softcapMap[token];
-        delete vestingDaysMap[token];
-        // delete topMap[token];
     }
 
     function afterMintHook(address, address, uint256) external virtual override {

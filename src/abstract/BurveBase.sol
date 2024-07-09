@@ -36,6 +36,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _;
     }
 
+    /// @inheritdoc IBurveToken
     function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual {
         _changeCoinMaker(bondingCurveAddress);
         _initProject(token.projectAdmin, token.projectTreasury);
@@ -54,30 +55,32 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _setupRole(PROJECT_ADMIN_ROLE, token.projectAdmin);
     }
 
-    function getProjectAdminRole() external pure returns (bytes32 role) {
-        return PROJECT_ADMIN_ROLE;
-    }
-
+    /// @inheritdoc IBurveToken
     function getFactory() public view returns (address) {
         return address(_factory);
     }
 
+    /// @inheritdoc IBurveToken
     function getProjectAdmin() public view returns (address) {
         return _projectAdmin;
     }
 
+    /// @inheritdoc IBurveToken
     function getProjectTreasury() public view returns (address) {
         return _projectTreasury;
     }
 
+    /// @inheritdoc IBurveToken
     function getRaisingToken() public view returns (address) {
         return _raisingToken;
     }
 
+    /// @inheritdoc IBurveToken
     function setMetadata(string memory url) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("metadata") {
         _setMetadata(url);
     }
 
+    /// @inheritdoc IBurveToken
     function setProjectAdmin(address newProjectAdmin) public onlyRole(PROJECT_ADMIN_ROLE) {
         require(newProjectAdmin != address(0), "Invalid Address");
         _revokeRole(PROJECT_ADMIN_ROLE, _projectAdmin);
@@ -91,6 +94,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _setProjectTaxRate(projectMintTax, projectBurnTax);
     }
 
+    /// @inheritdoc IBurveToken
     function setProjectTreasury(address newProjectTreasury) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("trade") {
         _setProjectTreasury(newProjectTreasury);
     }
@@ -124,18 +128,22 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogProjectTaxChanged();
     }
 
+    /// @inheritdoc IBurveToken
     function setProjectTaxRate(uint256 projectMintTax, uint256 projectBurnTax) public onlyRole(PROJECT_ADMIN_ROLE) modifyDelay("trade") {
         _setProjectTaxRate(projectMintTax, projectBurnTax);
     }
 
+    /// @inheritdoc IBurveToken
     function getTaxRateOfProject() public view returns (uint256 projectMintTax, uint256 projectBurnTax) {
         return (_projectMintTax, _projectBurnTax);
     }
 
+    /// @inheritdoc IBurveToken
     function getTaxRateOfPlatform() public view returns (uint256 platformMintTax, uint256 platformBurnTax) {
         return _factory.getTaxRateOfPlatform();
     }
 
+    /// @inheritdoc IBurveToken
     function mint(address to, uint payAmount, uint minReceive) public payable virtual nonReentrant {
         require(to != address(0), "can not mint to address(0)");
 
@@ -155,6 +163,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogMint(to, tokenAmount, payAmountActual, platformFee, projectFee);
     }
 
+    /// @inheritdoc IBurveToken
     function estimateMint(uint payAmount) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
         (uint256 _platformMintTax, ) = getTaxRateOfPlatform();
         projectFee = (payAmount * _projectMintTax) / MAX_TAX_RATE_DENOMINATOR;
@@ -164,6 +173,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return (receivedAmount, payAmountActual, platformFee, projectFee);
     }
 
+    /// @inheritdoc IBurveToken
     function estimateMintNeed(uint tokenAmountWant) public view virtual returns (uint receivedAmount, uint paidAmount, uint platformFee, uint projectFee) {
         (uint256 _platformMintTax, ) = getTaxRateOfPlatform();
         (, paidAmount) = _calculateBurnAmountFromBondingCurve(tokenAmountWant, circulatingSupply() + tokenAmountWant);
@@ -174,6 +184,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return (tokenAmountWant, paidAmount, platformFee, projectFee);
     }
 
+    /// @inheritdoc IBurveToken
     function burn(address to, uint payAmount, uint minReceive) public virtual nonReentrant {
         require(to != address(0), "can not burn to address(0)");
         // require(msg.value == 0, "Burn: dont need to attach ether");
@@ -194,6 +205,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         emit LogBurned(from, payAmount, amountReturn, platformFee, projectFee);
     }
 
+    /// @inheritdoc IBurveToken
     function estimateBurn(uint tokenAmount) public view virtual returns (uint amountNeed, uint amountReturn, uint platformFee, uint projectFee) {
         (, uint256 _platformBurnTax) = getTaxRateOfPlatform();
         (, amountReturn) = _calculateBurnAmountFromBondingCurve(tokenAmount, circulatingSupply());
@@ -204,6 +216,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         return (tokenAmount, amountReturn, platformFee, projectFee);
     }
 
+    /// @inheritdoc IBurveToken
     function price() public view returns (uint256) {
         return _price(circulatingSupply());
     }
@@ -233,12 +246,14 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function _burnInternal(address account, uint256 amount) internal virtual;
 
+    /// @inheritdoc IBurveToken
     function circulatingSupply() public view virtual returns (uint256);
 
     function getHooks() public view returns (address[] memory) {
         return _factory.getTokenHooks(address(this));
     }
 
+    /// @inheritdoc IBurveToken
     function claimPlatformFee() public onlyRole(FACTORY_ROLE) {
         _claimPlatformFee();
     }

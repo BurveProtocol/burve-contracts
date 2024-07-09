@@ -56,7 +56,7 @@ contract BurveDeployScript is BaseScript {
             admin = new ProxyAdmin();
         }
         BurveTokenFactory factoryImpl = new BurveTokenFactory();
-        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, deployer, 0xF3d5CAd1B841a1B3f0F9b7AD9a1262491418a414, address(0));
+        bytes memory factoryInitData = abi.encodeWithSelector(BurveTokenFactory.initialize.selector, deployer, 0xF3d5CAd1B841a1B3f0F9b7AD9a1262491418a414);
         TransparentUpgradeableProxy factoryProxy = new TransparentUpgradeableProxy(address(factoryImpl), address(admin), factoryInitData);
         factory = BurveTokenFactory(payable(factoryProxy));
         ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
@@ -212,13 +212,18 @@ contract BurveDeployScript is BaseScript {
         stopBroadcast();
     }
 
-    function upgradeAirdropHooks() public {
+    function upgradeSBTHooks() public {
+        deployerKey = vm.envUint("DEPLOYER_KEY");
+        startBroadcast(deployerKey);
+        SBTHook sbt = new SBTHook(address(factory));
+        factory.setHook(address(sbt), true);
+        stopBroadcast();
+    }
+
+    function upgradeSBTWithAirdropHook() public {
         deployerKey = vm.envUint("DEPLOYER_KEY");
         startBroadcast(deployerKey);
         SBTWithAirdropHook airdrop = new SBTWithAirdropHook(address(factory));
-        // factory.setHook(address(hardcap), true);
-        // factory.setHook(address(vesting), true);
-        // factory.setHook(address(sbt), true);
         factory.setHook(address(airdrop), true);
         stopBroadcast();
     }
@@ -227,11 +232,6 @@ contract BurveDeployScript is BaseScript {
         deployerKey = vm.envUint("DEPLOYER_KEY");
         startBroadcast(deployerKey);
         SBTWithAirdropHook airdrop = new SBTWithAirdropHook(address(factory));
-        // factory.setHook(address(hardcap), true);
-        // factory.setHook(address(vesting), true);
-        // factory.setHook(address(sbt), true);
-        // factory.setHook(address(airdrop), true);
-        // console.log("airdrop", address(airdrop));
         stopBroadcast();
         return address(airdrop);
     }

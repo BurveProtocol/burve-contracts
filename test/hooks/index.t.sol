@@ -18,24 +18,24 @@ contract HooksTest is BaseTest {
     }
 
     function testHardcap() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         HardcapHook hook = new HardcapHook(address(factory));
         deployNewHook(address(hook));
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether));
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), abi.encode(1 ether));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.prank(user1);
         vm.expectRevert("capped");
         currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
+        (, paidAmount, , ) = currentToken.estimateMintNeed(0.9 ether);
+        vm.deal(user1, paidAmount * 2);
+        vm.prank(user1);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
     }
 
     function testLaunchTime() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         LaunchTimeHook hook = new LaunchTimeHook(address(factory));
         deployNewHook(address(hook));
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), abi.encode(block.timestamp + 1 days));
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), abi.encode(block.timestamp + 1 days));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.startPrank(user1);
@@ -46,11 +46,9 @@ contract HooksTest is BaseTest {
     }
 
     function testVesting() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         VestingHook hook = new VestingHook(address(factory));
         deployNewHook(address(hook));
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), abi.encode(1 ether, 1));
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), abi.encode(1 ether, 1));
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.prank(user1);
@@ -61,11 +59,9 @@ contract HooksTest is BaseTest {
     }
 
     function testSBT() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         SBTHook hook = new SBTHook(address(factory));
         deployNewHook(address(hook));
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), "");
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), "");
         (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
         vm.deal(user1, paidAmount * 2);
         vm.prank(user1);
@@ -76,13 +72,11 @@ contract HooksTest is BaseTest {
     }
 
     function testIdoByTime() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         IdoByTimeHook hook = new IdoByTimeHook(address(factory));
         deployNewHook(address(hook));
         uint256 timestamp = block.timestamp + 1 days;
         bytes memory data = abi.encode(timestamp);
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), data);
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), data);
         vm.prank(user1);
         hook.fund{value: 1 ether}(currentToken, 1 ether);
         vm.prank(user2);
@@ -97,13 +91,11 @@ contract HooksTest is BaseTest {
     }
 
     function testIdoByCap() public {
-        deployNewERC20(100, 100, 1000, 0.001 ether);
         IdoByCapHook hook = new IdoByCapHook(address(factory));
         deployNewHook(address(hook));
         uint256 timestamp = block.timestamp + 1 days;
         bytes memory data = abi.encode(5 ether, timestamp);
-        vm.prank(projectAdmin);
-        factory.addHookForToken(address(currentToken), address(hook), data);
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), data);
         vm.prank(user2);
         hook.fund{value: 2 ether}(currentToken, 2 ether);
         vm.prank(user3);
