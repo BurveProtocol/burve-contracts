@@ -9,6 +9,7 @@ import "../../src/hooks/SBTHook.sol";
 import "../../src/hooks/VestingHook.sol";
 import "../../src/hooks/IdoByCapHook.sol";
 import "../../src/hooks/IdoByTimeHook.sol";
+import "../../src/hooks/SBTWithAirdropHook.sol";
 import "../../src/bondingCurve/LinearMixedBondingSwap.sol";
 
 contract HooksTest is BaseTest {
@@ -108,5 +109,35 @@ contract HooksTest is BaseTest {
         hook.claim(address(currentToken));
         console.log(IERC20(address(currentToken)).balanceOf(user2));
         console.log(IBurveToken(address(currentToken)).circulatingSupply());
+    }
+
+    function testSBTWithAirdrop() public {
+        SBTWithAirdropHook hook = new SBTWithAirdropHook(address(factory));
+        deployNewHook(address(hook));
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), abi.encode(block.timestamp + 1 days));
+        vm.prank(projectAdmin);
+        bytes32 _leaf = keccak256(bytes.concat(keccak256(abi.encode(address(currentToken), user2, 100 ether, 111))));
+        (, uint paidAmount2, , ) = currentToken.estimateMintNeed(5000 ether);
+        vm.deal(projectAdmin, paidAmount2);
+        vm.prank(projectAdmin);
+        hook.finalAirdrop{value: paidAmount2}(address(currentToken), paidAmount2, _leaf);
+
+        (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
+        vm.deal(user1, paidAmount * 2);
+        vm.prank(user1);
+        vm.expectRevert("can not mint yet");
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
+
+        vm.warp(block.timestamp + 1 days + 1);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
+        vm.prank(user1);
+        vm.expectRevert("can not transfer");
+        currentToken.transfer(user2, 1 ether);
+
+        vm.prank(user2);
+        hook.claimAirdrop(address(currentToken), 100 ether, 111, new bytes32[](0));
+        vm.prank(user3);
+        vm.expectRevert("Incorrect merkle proof");
+        hook.claimAirdrop(address(currentToken), 100 ether, 111, new bytes32[](0));
     }
 }
