@@ -43,6 +43,9 @@ contract SBTWithAirdropHook is BaseHook {
         require(IBurveToken(token).hasRole(projectAdminRole, msg.sender), "not project admin");
         address raisingToken = IBurveToken(token).getRaisingToken();
         _transferFrom(raisingToken, msg.sender, paidAmount);
+        if (raisingToken != address(0)) {
+            IERC20(raisingToken).safeApprove(token, paidAmount);
+        }
         IBurveToken(token).mint{value: raisingToken == address(0) ? paidAmount : 0}(address(this), paidAmount, 0);
         rootMap[token] = root;
         emit NewAirdrop(root, token, paidAmount, IERC20(token).balanceOf(address(this)));
