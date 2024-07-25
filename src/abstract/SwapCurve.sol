@@ -35,12 +35,4 @@ abstract contract SwapCurve {
     function _price(uint256 totalSupply) internal view returns (uint256) {
         return _coinMaker.price(totalSupply, _bondingCurveParameters);
     }
-
-    function getBondingCurve() public view returns (address) {
-        return address(_coinMaker);
-    }
-
-    function getParameters() public view returns (bytes memory) {
-        return _bondingCurveParameters;
-    }
 }

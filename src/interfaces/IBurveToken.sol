@@ -147,4 +147,8 @@ interface IBurveToken is IAccessControlUpgradeable {
     function claimPlatformFee() external;
 
     function circulatingSupply() external view returns (uint256);
+
+    function getBondingCurve() external view returns (address);
+
+    function getParameters() external view returns (bytes memory);
 }

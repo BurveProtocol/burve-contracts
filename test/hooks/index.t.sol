@@ -10,6 +10,7 @@ import "../../src/hooks/VestingHook.sol";
 import "../../src/hooks/IdoByCapHook.sol";
 import "../../src/hooks/IdoByTimeHook.sol";
 import "../../src/hooks/SBTWithAirdropHook.sol";
+import "../../src/hooks/LimitHook.sol";
 import "../../src/bondingCurve/LinearMixedBondingSwap.sol";
 
 contract HooksTest is BaseTest {
@@ -139,5 +140,26 @@ contract HooksTest is BaseTest {
         vm.prank(user3);
         vm.expectRevert("Incorrect merkle proof");
         hook.claimAirdrop(address(currentToken), 100 ether, 111, new bytes32[](0));
+    }
+
+    function testLimit() public {
+        LimitHook hook = new LimitHook(address(factory));
+        deployNewHook(address(hook));
+        deployNewERC20WithHooks(0, 0, 1000, 0.001 ether, 0, address(hook), abi.encode(100 ether));
+        vm.deal(user1, 1000000 ether);
+        vm.prank(user1);
+        currentToken.mint{value: 10 ether}(address(user1), 10 ether, 0);
+        vm.prank(user1);
+        currentToken.mint{value: 91 ether}(address(user1), 91 ether, 0);
+        vm.prank(user1);
+        vm.expectRevert();
+        currentToken.mint{value: 1 ether}(address(user1), 1 ether, 0);
+
+        vm.prank(projectAdmin);
+        hook.removeLimit(address(currentToken));
+        vm.prank(user1);
+        currentToken.mint{value: 1 ether}(address(user1), 1 ether, 0);
+        vm.prank(user1);
+        currentToken.mint{value: 1000 ether}(address(user1), 1000 ether, 0);
     }
 }

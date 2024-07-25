@@ -37,6 +37,10 @@ contract BurveTokenFactory is IBurveFactory, Initializable, AccessControl {
     uint256 private _platformBurnTax;
     address private _route;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     receive() external payable {
         (bool success, ) = _platformTreasury.call{value: msg.value}("");
         require(success, "platform transfer failed");

@@ -36,6 +36,10 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @inheritdoc IBurveToken
     function initialize(address bondingCurveAddress, IBurveFactory.TokenInfo memory token, address factory) public virtual {
         _changeCoinMaker(bondingCurveAddress);
@@ -266,6 +270,14 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
 
     function baseDecimals() internal view override returns (uint8) {
         return _baseDecimals;
+    }
+
+    function getBondingCurve() public view returns (address) {
+        return address(_coinMaker);
+    }
+
+    function getParameters() public view returns (bytes memory) {
+        return _bondingCurveParameters;
     }
 
     event LogProjectTaxChanged();
