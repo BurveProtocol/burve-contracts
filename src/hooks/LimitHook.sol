@@ -27,7 +27,7 @@ contract LimitHook is BaseHook {
             address bc = IBurveToken(token).getBondingCurve();
             bytes memory bcData = IBurveToken(token).getParameters();
             (, uint256 paidAmount) = IBondingCurve(bc).calculateBurnAmountFromBondingCurve(amount, IBurveToken(token).circulatingSupply() + amount, bcData);
-            require((userMinted[token][to] + paidAmount) <= Limits[token], "mint capped");
+            require((userMinted[token][to] + paidAmount) <= Limits[token], "limited");
             userMinted[token][to] += paidAmount;
         }
     }
