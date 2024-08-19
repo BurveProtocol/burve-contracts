@@ -148,3 +148,78 @@ contract BurveIntegrate{
 
 
 ```
+
+### How to whiltelist a hook
+
+* Fork our repository
+  https://github.com/BurveProtocol/burve-contracts.git
+
+* Create a new hook like `NewHook.sol` in `src/hooks`
+* Inherit from `BaseHook.sol`
+* If the hook needs some parameters, please override the `registerHook` and store it
+* Override the functions that you want to hook during the burning, minting or transferring. For more information, please refer the NatSpec of [BaseHook.sol](https://github.com/BurveProtocol/burve-contracts/blob/master/src/hooks/BaseHook.sol)
+* the `msg.sender` will be the address of token which is hooked except the function `registerHook`
+* Write `unit testing` in `test/hooks` with the hook name like `HardcapHook.t.sol`
+* Make a pull request of your commit with the hook description and how it work, and we will merge it and whitelist it on chain after our auditing.
+* It will be better if you can audit the hook by the auditing team like `certik`, `beosin` and etc. 
+* If you need some support from our dev team, please create a ticket in our Discord: [Link](https://discord.gg/fypW4zAqMB)
+
+``` solidity 
+/// SPDX-License-Identifier: None
+
+pragma solidity ^0.8.0;
+
+import "./BaseHook.sol";
+
+contract HardcapHook is BaseHook {
+    string public constant hookName = "Hardcap"; //a hook name, can be used for the frontend
+    string public constant parameterEncoder = "(uint256)"; //the parameter encode rule. also used for the frontend
+
+    constructor(address factory) BaseHook(factory) {}
+
+    mapping(address => uint256) capMap;//the custom storage
+
+    function registerHook(address token, bytes calldata data) external virtual override onlyFactory {
+        require(capMap[token] == 0, "already registered");
+        uint256 cap = abi.decode(data, (uint256));
+        capMap[token] = cap;
+    }
+
+    function beforeMintHook(address, address, uint256 amount) external view override {
+        require(IERC20(msg.sender).totalSupply() + amount <= capMap[msg.sender], "capped");
+    }
+}
+
+
+```
+
+``` solidity 
+
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
+import "forge-std/Test.sol";
+import "utils/BaseTest.sol";
+contract HooksTest is BaseTest {
+    function whiteListHook(address hook) public {
+        vm.prank(platformAdmin);
+        factory.setHook(hook, true);
+    }
+    
+    function testHardcap() public {
+        HardcapHook hook = new HardcapHook(address(factory));
+        whiteListHook(address(hook));
+        deployNewERC20WithHooks(100, 100, 1000, 0.001 ether, 0, address(hook), abi.encode(1 ether));
+        (, uint paidAmount, , ) = currentToken.estimateMintNeed(1.1 ether);
+        vm.deal(user1, paidAmount * 2);
+        vm.prank(user1);
+        vm.expectRevert("capped");
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
+        (, paidAmount, , ) = currentToken.estimateMintNeed(0.9 ether);
+        vm.deal(user1, paidAmount * 2);
+        vm.prank(user1);
+        currentToken.mint{value: paidAmount}(user1, paidAmount, 0);
+    }
+}
+
+```

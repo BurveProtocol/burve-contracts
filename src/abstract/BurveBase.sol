@@ -194,7 +194,7 @@ abstract contract BurveBase is BurveMetadata, SwapCurve, AccessControlUpgradeabl
         // require(msg.value == 0, "Burn: dont need to attach ether");
         address from = _msgSender();
         (, uint256 amountReturn, uint256 platformFee, uint256 projectFee) = estimateBurn(payAmount);
-        require(amountReturn >= minReceive, "Burn: payback amount less than minimal expect recieved");
+        require(amountReturn >= minReceive, "Burn: payback amount less than minimal expect received");
         address[] memory hooks = getHooks();
         for (uint256 i = 0; i < hooks.length; i++) {
             IHook(hooks[i]).beforeBurnHook(from, address(0), payAmount);

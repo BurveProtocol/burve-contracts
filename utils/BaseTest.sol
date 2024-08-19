@@ -27,6 +27,7 @@ abstract contract BaseTest is Test {
     string bondingCurveType;
     TestERC20 fakeUSDT = new TestERC20();
     LinearMixedBondingSwap linear;
+    ExpMixedBondingSwap exp;
 
     function setUp() public virtual {
         vm.startPrank(platformAdmin);
@@ -38,7 +39,7 @@ abstract contract BaseTest is Test {
         route = new BurveRoute(address(factoryProxy));
         factory = BurveTokenFactory(payable(factoryProxy));
         factory.setRoute(address(route));
-        ExpMixedBondingSwap exp = new ExpMixedBondingSwap();
+        exp = new ExpMixedBondingSwap();
         linear = new LinearMixedBondingSwap();
         factory.addBondingCurveImplement(address(exp));
         factory.addBondingCurveImplement(address(linear));

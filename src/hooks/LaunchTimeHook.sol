@@ -10,7 +10,7 @@ contract LaunchTimeHook is BaseHook {
 
     constructor(address factory) BaseHook(factory) {}
 
-    mapping(address => uint256) timeMap;
+    mapping(address => uint256) public timeMap;
 
     function registerHook(address token, bytes calldata data) external virtual override onlyFactory {
         require(timeMap[token] == 0 || timeMap[token] > block.timestamp, "already launched");
